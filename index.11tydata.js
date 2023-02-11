@@ -23,7 +23,7 @@ function authorList(authors) {
     });
     return list.join(", ");
 }
-
+/*
 module.exports = {
     publications: [{
             title: "DiSh: Dynamic Shell-Script Distribution",
@@ -143,3 +143,4 @@ module.exports = {
         },
     ],
 };
+ */
