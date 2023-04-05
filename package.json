@@ -9,7 +9,7 @@
     "license": "MIT",
     "author": "Patrick LaFontaine",
     "devDependencies": {
-        "@11ty/eleventy": "^2.0.0"
+        "@11ty/eleventy": "^2.0.1"
     },
     "dependencies": {
         "@grimlink/eleventy-plugin-sass": "^1.0.1",
