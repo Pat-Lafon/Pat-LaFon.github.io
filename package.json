@@ -13,6 +13,6 @@
     },
     "dependencies": {
         "@grimlink/eleventy-plugin-sass": "^1.0.3",
-        "sass": "^1.63.6"
+        "sass": "^1.68.0"
     }
 }
