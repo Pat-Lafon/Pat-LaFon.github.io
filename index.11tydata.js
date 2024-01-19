@@ -6,7 +6,7 @@
 // lets us flexibly prepare the data and simplifies the template.
 
 // These are my frequent collaborators, so let's use some variables:
-const me = "Pratyush Das";
+const me = "Patrick LaFontaine";
 
 // authorList generates the HTML for the author list from a JS array
 function authorList(authors) {
