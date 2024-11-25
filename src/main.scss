@@ -1,4 +1,5 @@
 $blue: #0051c9;
+
 @mixin bold {
     font-weight: 600;
 }
@@ -51,15 +52,16 @@ td {
 }
 
 .bio {
-    padding-right: 2.5%;
-    width: 63%;
-    vertical-align: center;
+    display: flex;
+    flex-flow: wrap;
+    align-items: center;
+    justify-content: center;
 }
 
-.photo {
-    padding-left: 2.5%;
-    height: 20em;
-    width: 30%;
+@media (max-width: 800px) {
+    .bio {
+        flex-direction: column-reverse;
+    }
 }
 
 .self-author {
@@ -97,4 +99,11 @@ ul {
 .ta li {
     list-style-type: "";
     padding-left: 8px;
+}
+
+.header {
+    display: flex;
+    flex-flow: wrap;
+    align-items: center;
+    justify-content: center;
 }
