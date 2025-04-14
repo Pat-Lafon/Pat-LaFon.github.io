@@ -3,7 +3,6 @@ title: Submitting a Paper to Arxiv with Minted (2025)
 description: This is a post on My Blog about touchpoints and circling wagons.
 date: 2025-04-14
 tags: [latex, research]
-draft: true
 ---
 
 # Minted/Arxiv
