@@ -1,0 +1,11 @@
+---
+layout: layouts/base.njk
+---
+<!-- Delete this block, which will also remove the component CSS from the bundle -->
+{%- css %}{% include "public/css/message-box.css" %}{% endcss %}
+<div class="message-box">
+Current Status: Considering whether to keep this message box.
+</div>
+<!-- Stop deleting -->
+
+{{ content | safe }}
