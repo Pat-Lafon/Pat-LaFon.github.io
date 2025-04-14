@@ -3,10 +3,10 @@
 <feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
   <title>Patrick LaFontaine&#39;s Blog</title>
   <subtitle>Precipitously Produced; Powered by Prolonged Procrastination</subtitle>
-  <link href="https://pat-lafon.github.io/eleventy-base-blog/feed/feed.xml" rel="self" />
-  <link href="https://pat-lafon.github.io/eleventy-base-blog/" />
-  <updated>2025-04-14T18:59:38Z</updated>
-  <id>https://pat-lafon.github.io/eleventy-base-blog/</id>
+  <link href="https://pat-lafon.github.io/feed/feed.xml" rel="self" />
+  <link href="https://pat-lafon.github.io/" />
+  <updated>2025-04-14T19:02:13Z</updated>
+  <id>https://pat-lafon.github.io/</id>
   <author>
     <name>Patrick LaFontaine</name>
   </author>
