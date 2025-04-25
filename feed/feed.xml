@@ -5,11 +5,29 @@
   <subtitle>Precipitously Produced; Powered by Prolonged Procrastination</subtitle>
   <link href="https://pat-lafon.github.io/feed/feed.xml" rel="self" />
   <link href="https://pat-lafon.github.io/" />
-  <updated>2025-04-14T00:00:00Z</updated>
+  <updated>2025-04-25T00:00:00Z</updated>
   <id>https://pat-lafon.github.io/</id>
   <author>
     <name>Patrick LaFontaine</name>
   </author>
+  <entry>
+    <title>How are interpreted recursive functions implemented in SMT solvers?</title>
+    <link href="https://pat-lafon.github.io/blog/How_are_smt_rec_funs_implemented/" />
+    <updated>2025-04-25T00:00:00Z</updated>
+    <id>https://pat-lafon.github.io/blog/How_are_smt_rec_funs_implemented/</id>
+    <content type="html">&lt;p&gt;Having largely used and heard about logics with respect to uninterpreted
+function symbols, I was surprised to learn that Smtlib (and therefore the main solvers
+like Z3 and CVC5) support adding interpretations to function symbols. Even
+recursive ones!&lt;/p&gt;
+&lt;p&gt;It&#39;s kinda hard to find resources on this, and Claude was giving me a bunch of
+fake/misleading references but the best source I&#39;ve found is
+&lt;a href=&quot;https://github.com/Z3Prover/z3/blob/792ffeeda7195325ce19dff98aaa63a42d7fd739/doc/design_recfuns.md&quot;&gt;https://github.com/Z3Prover/z3/blob/792ffeeda7195325ce19dff98aaa63a42d7fd739/doc/design_recfuns.md&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;I also found Section 2.2 of &lt;a href=&quot;https://dl.acm.org/doi/10.1145/3158141&quot;&gt;Refinement
+Reflection&lt;/a&gt; very interesting.&lt;/p&gt;
+&lt;p&gt;I still don&#39;t fully understand this space, but a key part seems to be how do you
+guard/limit the unrolling of the definition on symbolic values?&lt;/p&gt;
+</content>
+  </entry>
   <entry>
     <title>Submitting a Paper to Arxiv with Minted (2025)</title>
     <link href="https://pat-lafon.github.io/blog/2025_Version_of_submit_minted_package_to_arxiv/" />
