@@ -15,8 +15,9 @@ advised by Professor [Ben Delaware](https://www.cs.purdue.edu/homes/bendy/).
 
 My paper [We've Got You Covered: Type-Guided
 Repair of Incomplete Generators](papers/cobb.pdf) has been accepted to [OOPSLA
-2025](https://2025.splashcon.org/track/OOPSLA?#event-overview). Slides and talk
-video to come!
+2025](https://2025.splashcon.org/track/OOPSLA?#event-overview).
+[Slides](papers/OOPSLA_COBB_TALK.pdf) and
+[recorded talk](https://youtu.be/j_nXuGhMFdo?t=10173)
 
 In the summer of 2025 I was a returning intern at Amazon Web Services(AWS) as an Applied
 Scientist. I developed a novel black-box, data-driven specification inference
