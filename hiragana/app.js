@@ -184,7 +184,7 @@ export function App() {
       window.speechSynthesis.cancel();
       const utter = new SpeechSynthesisUtterance(kana);
       utter.lang = "ja-JP";
-      utter.rate = 0.85;
+      utter.rate = 0.6;
       const voices = window.speechSynthesis.getVoices();
       const jaVoice = voices.find(v => v.lang === "ja-JP" || v.lang.startsWith("ja"));
       if (jaVoice) utter.voice = jaVoice;
