@@ -1,8 +1,8 @@
-// Simple service worker for offline support.
-// Caches app shell + CDN assets on first run, serves from cache after.
+// Service worker for offline support.
+// Network-first for app files (always get latest), cache-first for CDN assets.
 
-const CACHE = "hiragana-v1";
-const ASSETS = [
+const CACHE = "hiragana-cache";
+const APP_ASSETS = [
   "./",
   "./index.html",
   "./app.js",
@@ -11,37 +11,51 @@ const ASSETS = [
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(ASSETS)).catch(() => {})
+    caches.open(CACHE).then((cache) => cache.addAll(APP_ASSETS)).catch(() => {})
   );
   self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
-    )
-  );
   self.clients.claim();
 });
 
-self.addEventListener("fetch", (event) => {
-  const req = event.request;
-  if (req.method !== "GET") return;
+function isSameOrigin(url) {
+  return new URL(url).origin === self.location.origin;
+}
 
-  event.respondWith(
-    caches.match(req).then((cached) => {
-      const network = fetch(req)
-        .then((res) => {
-          // Cache successful responses, including CDN imports
-          if (res && res.status === 200 && res.type !== "opaque") {
-            const copy = res.clone();
-            caches.open(CACHE).then((cache) => cache.put(req, copy)).catch(() => {});
-          }
-          return res;
-        })
-        .catch(() => cached);
-      return cached || network;
+// Network-first: try network, update cache, fall back to cache if offline
+function networkFirst(req) {
+  return fetch(req)
+    .then((res) => {
+      if (res && res.status === 200) {
+        const copy = res.clone();
+        caches.open(CACHE).then((cache) => cache.put(req, copy)).catch(() => {});
+      }
+      return res;
     })
+    .catch(() => caches.match(req));
+}
+
+// Cache-first: serve from cache, fetch and cache in background if miss
+function cacheFirst(req) {
+  return caches.match(req).then((cached) => {
+    if (cached) return cached;
+    return fetch(req).then((res) => {
+      if (res && res.status === 200 && res.type !== "opaque") {
+        const copy = res.clone();
+        caches.open(CACHE).then((cache) => cache.put(req, copy)).catch(() => {});
+      }
+      return res;
+    });
+  });
+}
+
+self.addEventListener("fetch", (event) => {
+  if (event.request.method !== "GET") return;
+  event.respondWith(
+    isSameOrigin(event.request.url)
+      ? networkFirst(event.request)
+      : cacheFirst(event.request)
   );
 });

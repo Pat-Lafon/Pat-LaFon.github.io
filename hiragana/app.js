@@ -25,8 +25,31 @@ const ROWS = [
 ];
 
 const STORAGE_KEY = "hiragana-srs-v1";
+const STATS_KEY = "hiragana-stats-v1";
 const DEFAULT_ENABLED = ["vowels", "k"];
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+function todayKey() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function loadTodayStats() {
+  try {
+    const raw = localStorage.getItem(STATS_KEY);
+    if (!raw) return null;
+    const all = JSON.parse(raw);
+    return all[todayKey()] || null;
+  } catch (e) { return null; }
+}
+
+function saveTodayStats(stats) {
+  try {
+    const raw = localStorage.getItem(STATS_KEY);
+    const all = raw ? JSON.parse(raw) : {};
+    all[todayKey()] = stats;
+    localStorage.setItem(STATS_KEY, JSON.stringify(all));
+  } catch (e) { /* skip */ }
+}
 
 // ============================================================
 // SM-2-ish spaced repetition algorithm
@@ -98,7 +121,7 @@ export function App() {
   const [revealed, setRevealed] = useState(false);
   const [input, setInput] = useState("");
   const [feedback, setFeedback] = useState(null);
-  const [stats, setStats] = useState({ reviewed: 0, correct: 0 });
+  const [stats, setStats] = useState(() => loadTodayStats() || { reviewed: 0, correct: 0 });
   const [showSettings, setShowSettings] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [now, setNow] = useState(Date.now());
@@ -141,6 +164,12 @@ export function App() {
     if (!loaded) return;
     saveState({ enabledRows, cards });
   }, [enabledRows, cards, loaded]);
+
+  // Save stats on change
+  useEffect(() => {
+    if (!loaded) return;
+    saveTodayStats(stats);
+  }, [stats, loaded]);
 
   // Ensure cards exist for every char in enabled rows
   useEffect(() => {
@@ -236,7 +265,6 @@ export function App() {
     if (!confirm("Reset all SRS progress? Your enabled rows will stay the same.")) return;
     setCards({});
     setCurrent(null);
-    setStats({ reviewed: 0, correct: 0 });
   }
 
   const enabledCards = Object.values(cards).filter(c => enabledRows.includes(c.rowId));
