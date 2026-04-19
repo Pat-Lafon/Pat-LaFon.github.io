@@ -190,8 +190,9 @@ export function App() {
     });
   }, [enabledRows, loaded]);
 
-  function pickNext(cardMap = cards) {
-    const pool = Object.values(cardMap).filter((c) => enabledRows.includes(c.rowId));
+  function pickNext(cardMap = cards, exclude = current?.kana) {
+    const all = Object.values(cardMap).filter((c) => enabledRows.includes(c.rowId));
+    const pool = all.length > 1 ? all.filter((c) => c.kana !== exclude) : all;
     if (pool.length === 0) return null;
     const due = pool.filter((c) => c.due <= Date.now());
     const candidates = due.length ? due : pool;
