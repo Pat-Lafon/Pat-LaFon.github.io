@@ -19,9 +19,20 @@ const ROWS = [
   { id: "w",      label: "W-row + n",         chars: [["わ","wa"],["を","wo"],["ん","n"]] },
   { id: "g",      label: "G-row (dakuten)",   chars: [["が","ga"],["ぎ","gi"],["ぐ","gu"],["げ","ge"],["ご","go"]] },
   { id: "z",      label: "Z-row (dakuten)",   chars: [["ざ","za"],["じ","ji"],["ず","zu"],["ぜ","ze"],["ぞ","zo"]] },
-  { id: "d",      label: "D-row (dakuten)",   chars: [["だ","da"],["ぢ","ji"],["づ","zu"],["で","de"],["ど","do"]] },
+  { id: "d",      label: "D-row (dakuten)",   chars: [["だ","da"],["ぢ","di"],["づ","du"],["で","de"],["ど","do"]] },
   { id: "b",      label: "B-row (dakuten)",   chars: [["ば","ba"],["び","bi"],["ぶ","bu"],["べ","be"],["ぼ","bo"]] },
   { id: "p",      label: "P-row (handakuten)",chars: [["ぱ","pa"],["ぴ","pi"],["ぷ","pu"],["ぺ","pe"],["ぽ","po"]] },
+  { id: "ky",     label: "Ky-combo",          chars: [["きゃ","kya"],["きゅ","kyu"],["きょ","kyo"]] },
+  { id: "sh",     label: "Sh-combo",          chars: [["しゃ","sha"],["しゅ","shu"],["しょ","sho"]] },
+  { id: "ch",     label: "Ch-combo",          chars: [["ちゃ","cha"],["ちゅ","chu"],["ちょ","cho"]] },
+  { id: "ny",     label: "Ny-combo",          chars: [["にゃ","nya"],["にゅ","nyu"],["にょ","nyo"]] },
+  { id: "hy",     label: "Hy-combo",          chars: [["ひゃ","hya"],["ひゅ","hyu"],["ひょ","hyo"]] },
+  { id: "my",     label: "My-combo",          chars: [["みゃ","mya"],["みゅ","myu"],["みょ","myo"]] },
+  { id: "ry",     label: "Ry-combo",          chars: [["りゃ","rya"],["りゅ","ryu"],["りょ","ryo"]] },
+  { id: "gy",     label: "Gy-combo",          chars: [["ぎゃ","gya"],["ぎゅ","gyu"],["ぎょ","gyo"]] },
+  { id: "jy",     label: "J-combo",           chars: [["じゃ","ja"],["じゅ","ju"],["じょ","jo"]] },
+  { id: "by",     label: "By-combo",          chars: [["びゃ","bya"],["びゅ","byu"],["びょ","byo"]] },
+  { id: "py",     label: "Py-combo",          chars: [["ぴゃ","pya"],["ぴゅ","pyu"],["ぴょ","pyo"]] },
 ];
 
 const STORAGE_KEY = "hiragana-srs-v1";
@@ -75,6 +86,9 @@ function scheduleCard(card, quality) {
   const due = interval === 0 ? Date.now() + 30 * 1000 : Date.now() + interval * DAY_MS;
   return { ...card, ease, interval, reps, lapses, due, lastReviewed: Date.now() };
 }
+
+// Alternate accepted romaji (pronunciation-based aliases for typing variants)
+const ALT_ROMAJI = { "ぢ": ["ji"], "づ": ["zu"], "ふ": ["hu"], "を": ["o"] };
 
 function makeFreshCard(kana, romaji, rowId) {
   return { kana, romaji, rowId, ease: 2.5, interval: 0, reps: 0, lapses: 0, due: Date.now(), lastReviewed: 0 };
@@ -252,7 +266,8 @@ export function App() {
     if (!current || revealed) return;
     const guess = input.trim().toLowerCase();
     if (!guess) return;
-    const correct = guess === current.romaji.toLowerCase();
+    const alts = ALT_ROMAJI[current.kana] || [];
+    const correct = guess === current.romaji.toLowerCase() || alts.includes(guess);
     setFeedback({ correct, answer: current.romaji });
     setRevealed(true);
     setStats((s) => ({ reviewed: s.reviewed + 1, correct: s.correct + (correct ? 1 : 0) }));
