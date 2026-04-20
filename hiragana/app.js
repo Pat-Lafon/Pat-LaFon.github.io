@@ -38,7 +38,9 @@ function loadTodayStats() {
     const raw = localStorage.getItem(STATS_KEY);
     if (!raw) return null;
     const all = JSON.parse(raw);
-    return all[todayKey()] || null;
+    const s = all[todayKey()];
+    if (s && typeof s.reviewed === "number" && typeof s.correct === "number") return s;
+    return null;
   } catch (e) { return null; }
 }
 
@@ -90,11 +92,23 @@ function shuffle(arr) {
 // ============================================================
 // localStorage wrappers — actually reliable, unlike artifact storage
 // ============================================================
+function isValidCard(c) {
+  return c && typeof c.kana === "string" && typeof c.romaji === "string"
+    && typeof c.ease === "number" && typeof c.interval === "number"
+    && typeof c.reps === "number" && typeof c.due === "number";
+}
+
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    if (parsed.cards && typeof parsed.cards === "object") {
+      for (const [k, v] of Object.entries(parsed.cards)) {
+        if (!isValidCard(v)) delete parsed.cards[k];
+      }
+    }
+    return parsed;
   } catch (e) {
     console.warn("loadState failed:", e);
     return null;
