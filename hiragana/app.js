@@ -184,7 +184,7 @@ export function App() {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  });
+  }, [revealed, feedback]);
 
   // Load from localStorage on mount (synchronous, simple, reliable)
   useEffect(() => {
