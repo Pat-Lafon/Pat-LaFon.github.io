@@ -23,7 +23,8 @@ export default async function(eleventyConfig) {
 		})
 		.addPassthroughCopy("./content/feed/pretty-atom-feed.xsl")
 		.addPassthroughCopy("./content/papers")
-		.addPassthroughCopy("./hiragana");
+		.addPassthroughCopy("./hiragana")
+		.addPassthroughCopy("./meditation");
 
 	// Run Eleventy when these files change:
 	// https://www.11ty.dev/docs/watch-serve/#add-your-own-watch-targets
