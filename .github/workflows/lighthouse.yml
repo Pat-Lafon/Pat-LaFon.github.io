@@ -20,6 +20,8 @@ jobs:
             name: blog
           - url: https://pat-lafon.github.io/hiragana/
             name: hiragana
+          - url: https://pat-lafon.github.io/meditation/
+            name: meditation
     steps:
       - uses: actions/checkout@v4
 
