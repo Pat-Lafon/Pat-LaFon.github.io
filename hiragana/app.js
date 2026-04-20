@@ -38,7 +38,9 @@ function loadTodayStats() {
     const raw = localStorage.getItem(STATS_KEY);
     if (!raw) return null;
     const all = JSON.parse(raw);
-    return all[todayKey()] || null;
+    const s = all[todayKey()];
+    if (s && typeof s.reviewed === "number" && typeof s.correct === "number") return s;
+    return null;
   } catch (e) { return null; }
 }
 
@@ -90,11 +92,23 @@ function shuffle(arr) {
 // ============================================================
 // localStorage wrappers — actually reliable, unlike artifact storage
 // ============================================================
+function isValidCard(c) {
+  return c && typeof c.kana === "string" && typeof c.romaji === "string"
+    && typeof c.ease === "number" && typeof c.interval === "number"
+    && typeof c.reps === "number" && typeof c.due === "number";
+}
+
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    if (parsed.cards && typeof parsed.cards === "object") {
+      for (const [k, v] of Object.entries(parsed.cards)) {
+        if (!isValidCard(v)) delete parsed.cards[k];
+      }
+    }
+    return parsed;
   } catch (e) {
     console.warn("loadState failed:", e);
     return null;
@@ -126,6 +140,19 @@ export function App() {
   const [loaded, setLoaded] = useState(false);
   const [now, setNow] = useState(Date.now());
   const inputRef = useRef(null);
+  const jaVoiceRef = useRef(null);
+
+  // Preload Japanese voice (voices load asynchronously in some browsers)
+  useEffect(() => {
+    function findJaVoice() {
+      const voices = window.speechSynthesis?.getVoices() || [];
+      const v = voices.find(v => v.lang === "ja-JP" || v.lang.startsWith("ja"));
+      if (v) jaVoiceRef.current = v;
+    }
+    findJaVoice();
+    window.speechSynthesis?.addEventListener("voiceschanged", findJaVoice);
+    return () => window.speechSynthesis?.removeEventListener("voiceschanged", findJaVoice);
+  }, []);
 
   // tick clock
   useEffect(() => {
@@ -215,9 +242,7 @@ export function App() {
       const utter = new SpeechSynthesisUtterance(kana);
       utter.lang = "ja-JP";
       utter.rate = 0.6;
-      const voices = window.speechSynthesis.getVoices();
-      const jaVoice = voices.find(v => v.lang === "ja-JP" || v.lang.startsWith("ja"));
-      if (jaVoice) utter.voice = jaVoice;
+      if (jaVoiceRef.current) utter.voice = jaVoiceRef.current;
       window.speechSynthesis.speak(utter);
     } catch (e) { /* skip */ }
   }
@@ -241,12 +266,14 @@ export function App() {
   function grade(quality, card = current) {
     if (!card) return;
     const updated = scheduleCard(card, quality);
-    const newCards = { ...cards, [card.kana]: updated };
-    setCards(newCards);
+    setCards((prev) => {
+      const newCards = { ...prev, [card.kana]: updated };
+      setCurrent(pickNext(newCards));
+      return newCards;
+    });
     setRevealed(false);
     setFeedback(null);
     setInput("");
-    setCurrent(pickNext(newCards));
     setTimeout(() => inputRef.current?.focus(), 0);
   }
 
