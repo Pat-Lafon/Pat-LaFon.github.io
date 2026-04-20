@@ -1,0 +1,45 @@
+name: Lighthouse Audit
+
+on:
+  workflow_run:
+    workflows: ["Deploy to GitHub Pages"]
+    types:
+      - completed
+
+jobs:
+  lighthouse:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        preset: [desktop, mobile]
+        page:
+          - url: https://pat-lafon.github.io/
+            name: home
+          - url: https://pat-lafon.github.io/blog/
+            name: blog
+          - url: https://pat-lafon.github.io/hiragana/
+            name: hiragana
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lighthouse (${{ matrix.preset }} - ${{ matrix.page.name }})
+        id: lighthouse
+        uses: treosh/lighthouse-ci-action@v12
+        with:
+          urls: ${{ matrix.page.url }}
+          configPath: .github/lighthouse/config-${{ matrix.preset }}.json
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+
+      - name: Format results
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const results = ${{ steps.lighthouse.outputs.manifest }};
+            const r = results[0].summary;
+            const score = (v) => `${Math.round(v * 100)}`;
+            const line = `| ${{ matrix.page.name }} (${{ matrix.preset }}) | ${score(r.performance)} | ${score(r.accessibility)} | ${score(r.bestPractices)} | ${score(r.seo)} |`;
+            core.summary.addRaw(line);
+            await core.summary.write();

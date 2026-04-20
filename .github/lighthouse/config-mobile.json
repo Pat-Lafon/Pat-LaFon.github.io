@@ -1,0 +1,10 @@
+{
+  "ci": {
+    "collect": {
+      "settings": {
+        "preset": "perf"
+      },
+      "numberOfRuns": 3
+    }
+  }
+}
