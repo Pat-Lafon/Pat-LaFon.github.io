@@ -140,6 +140,19 @@ export function App() {
   const [loaded, setLoaded] = useState(false);
   const [now, setNow] = useState(Date.now());
   const inputRef = useRef(null);
+  const jaVoiceRef = useRef(null);
+
+  // Preload Japanese voice (voices load asynchronously in some browsers)
+  useEffect(() => {
+    function findJaVoice() {
+      const voices = window.speechSynthesis?.getVoices() || [];
+      const v = voices.find(v => v.lang === "ja-JP" || v.lang.startsWith("ja"));
+      if (v) jaVoiceRef.current = v;
+    }
+    findJaVoice();
+    window.speechSynthesis?.addEventListener("voiceschanged", findJaVoice);
+    return () => window.speechSynthesis?.removeEventListener("voiceschanged", findJaVoice);
+  }, []);
 
   // tick clock
   useEffect(() => {
@@ -229,9 +242,7 @@ export function App() {
       const utter = new SpeechSynthesisUtterance(kana);
       utter.lang = "ja-JP";
       utter.rate = 0.6;
-      const voices = window.speechSynthesis.getVoices();
-      const jaVoice = voices.find(v => v.lang === "ja-JP" || v.lang.startsWith("ja"));
-      if (jaVoice) utter.voice = jaVoice;
+      if (jaVoiceRef.current) utter.voice = jaVoiceRef.current;
       window.speechSynthesis.speak(utter);
     } catch (e) { /* skip */ }
   }
