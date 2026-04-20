@@ -6,6 +6,10 @@
 <title>Box Breathing</title>
 <meta name="description" content="A calm, minimal box breathing guide — 4-4-4-4 rhythm with soft ambient sound and an adjustable timer." />
 <meta name="theme-color" content="#0f172a" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<link rel="manifest" href="manifest.json" />
+<link rel="apple-touch-icon" href="icon-192.png" />
 <meta property="og:title" content="Box Breathing" />
 <meta property="og:description" content="A calm, minimal box breathing guide with soft ambient sound and an adjustable timer." />
 <meta property="og:type" content="website" />
@@ -167,7 +171,9 @@
 
   <div class="controls">
     <button id="startBtn">Start</button>
-    <button id="stopBtn">Stop</button>
+    <button id="pauseBtn" style="display:none">Pause</button>
+    <button id="resumeBtn" style="display:none">Resume</button>
+    <button id="stopBtn" style="display:none">Stop</button>
   </div>
 
   <div class="remaining" id="remaining"></div>
@@ -181,6 +187,8 @@
   const phaseEl = document.getElementById('phase');
   const countEl = document.getElementById('count');
   const startBtn = document.getElementById('startBtn');
+  const pauseBtn = document.getElementById('pauseBtn');
+  const resumeBtn = document.getElementById('resumeBtn');
   const stopBtn = document.getElementById('stopBtn');
   const soundToggle = document.getElementById('soundToggle');
   const remainingEl = document.getElementById('remaining');
@@ -192,6 +200,10 @@
 
   const SIDE = 280; // matches box width
   const PHASE_MS = 4000;
+  const PHASE_INHALE = 0;
+  const PHASE_HOLD_FULL = 1;
+  const PHASE_EXHALE = 2;
+  const PHASE_HOLD_EMPTY = 3;
   const phases = ['Inhale', 'Hold', 'Exhale', 'Hold'];
 
   // Filter sweep range — kept low and narrow for a soft, mellow sound
@@ -201,14 +213,29 @@
   const CHIME_DURATION = 0.6;
 
   let running = false;
+  let paused = false;
   let rafId = null;
   let phaseIdx = 0;
   let phaseStart = 0;
+  let pausedElapsed = 0; // how far into current phase when paused
+  let pausedSessionElapsed = 0; // how far into session when paused
   let audioCtx = null;
   let noiseSource = null;
   let filterNode = null;
   let filterNode2 = null;
   let gainNode = null;
+
+  function updateControls() {
+    const active = running || paused;
+    startBtn.style.display = active ? 'none' : '';
+    pauseBtn.style.display = running ? '' : 'none';
+    resumeBtn.style.display = paused ? '' : 'none';
+    stopBtn.style.display = active ? '' : 'none';
+    chips.forEach(c => {
+      c.style.opacity = active ? '0.4' : '';
+      c.style.pointerEvents = active ? 'none' : '';
+    });
+  }
 
   function createNoiseBuffer(ctx) {
     // 3 seconds of brown noise — much softer/deeper than pink, like distant ocean
@@ -283,19 +310,19 @@
 
     let cutoff, gain;
     switch (phaseIdx) {
-      case 0: // Inhale: filter opens slightly, gentle swell
+      case PHASE_INHALE: // filter opens slightly, gentle swell
         cutoff = FILTER_LOW + (FILTER_HIGH - FILTER_LOW) * progress;
         gain = MAX_GAIN * (0.15 + 0.85 * progress);
         break;
-      case 1: // Hold (full): sustained, mellow
+      case PHASE_HOLD_FULL: // sustained, mellow
         cutoff = FILTER_HIGH;
         gain = MAX_GAIN * 0.5;
         break;
-      case 2: // Exhale: filter closes, gentle fade
+      case PHASE_EXHALE: // filter closes, gentle fade
         cutoff = FILTER_HIGH - (FILTER_HIGH - FILTER_LOW) * progress;
         gain = MAX_GAIN * (1 - 0.85 * progress) * 0.85 + 0.02;
         break;
-      case 3: // Hold (empty): very quiet
+      case PHASE_HOLD_EMPTY: // very quiet
         cutoff = FILTER_LOW;
         gain = 0.02;
         break;
@@ -309,10 +336,10 @@
     // progress 0..1 along current side
     let x = 0, y = 0;
     switch (phaseIdx) {
-      case 0: x = progress * SIDE; y = 0; break;            // top edge L→R
-      case 1: x = SIDE; y = progress * SIDE; break;          // right edge T→B
-      case 2: x = SIDE - progress * SIDE; y = SIDE; break;   // bottom edge R→L
-      case 3: x = 0; y = SIDE - progress * SIDE; break;      // left edge B→T
+      case PHASE_INHALE:    x = progress * SIDE; y = 0; break;            // top edge L→R
+      case PHASE_HOLD_FULL: x = SIDE; y = progress * SIDE; break;          // right edge T→B
+      case PHASE_EXHALE:    x = SIDE - progress * SIDE; y = SIDE; break;   // bottom edge R→L
+      case PHASE_HOLD_EMPTY: x = 0; y = SIDE - progress * SIDE; break;     // left edge B→T
     }
     dot.style.transform = `translate(${x}px, ${y}px)`;
   }
@@ -380,27 +407,58 @@
   function start() {
     if (running) return;
     running = true;
+    paused = false;
     phaseIdx = 0;
     sessionStart = performance.now();
     sessionEndChimePlayed = false;
     ensureAudio();
     startPhase();
     rafId = requestAnimationFrame(loop);
+    updateControls();
+  }
+
+  function pause() {
+    if (!running) return;
+    const now = performance.now();
+    pausedElapsed = now - phaseStart;
+    pausedSessionElapsed = now - sessionStart;
+    running = false;
+    paused = true;
+    if (rafId) cancelAnimationFrame(rafId);
+    if (gainNode && audioCtx) gainNode.gain.setTargetAtTime(0.0001, audioCtx.currentTime, 0.05);
+    phaseEl.textContent = 'Paused';
+    updateControls();
+  }
+
+  function resume() {
+    if (!paused) return;
+    paused = false;
+    running = true;
+    const now = performance.now();
+    phaseStart = now - pausedElapsed;
+    sessionStart = now - pausedSessionElapsed;
+    ensureAudio();
+    phaseEl.textContent = phases[phaseIdx];
+    rafId = requestAnimationFrame(loop);
+    updateControls();
   }
 
   function stop(completed = false) {
     running = false;
+    paused = false;
     if (rafId) cancelAnimationFrame(rafId);
     if (gainNode && audioCtx) gainNode.gain.setTargetAtTime(0.0001, audioCtx.currentTime, 0.05);
     phaseEl.textContent = completed ? 'Complete' : 'Ready';
     countEl.textContent = '—';
     dot.style.transform = `translate(0px, 0px)`;
     if (!completed) remainingEl.textContent = '';
+    updateControls();
   }
 
   // Duration chip selection
   chips.forEach(chip => {
     chip.addEventListener('click', () => {
+      if (running || paused) return;
       chips.forEach(c => c.classList.remove('active'));
       chip.classList.add('active');
       sessionMinutes = parseInt(chip.dataset.minutes, 10);
@@ -408,7 +466,16 @@
   });
 
   startBtn.addEventListener('click', start);
+  pauseBtn.addEventListener('click', pause);
+  resumeBtn.addEventListener('click', resume);
   stopBtn.addEventListener('click', () => stop(false));
+
+  // Register service worker for offline support
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    });
+  }
 </script>
 </body>
 </html>
