@@ -266,12 +266,14 @@ export function App() {
   function grade(quality, card = current) {
     if (!card) return;
     const updated = scheduleCard(card, quality);
-    const newCards = { ...cards, [card.kana]: updated };
-    setCards(newCards);
+    setCards((prev) => {
+      const newCards = { ...prev, [card.kana]: updated };
+      setCurrent(pickNext(newCards));
+      return newCards;
+    });
     setRevealed(false);
     setFeedback(null);
     setInput("");
-    setCurrent(pickNext(newCards));
     setTimeout(() => inputRef.current?.focus(), 0);
   }
 
