@@ -6,6 +6,10 @@
 <title>Box Breathing</title>
 <meta name="description" content="A calm, minimal box breathing guide — 4-4-4-4 rhythm with soft ambient sound and an adjustable timer." />
 <meta name="theme-color" content="#0f172a" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<link rel="manifest" href="manifest.json" />
+<link rel="apple-touch-icon" href="icon-192.png" />
 <meta property="og:title" content="Box Breathing" />
 <meta property="og:description" content="A calm, minimal box breathing guide with soft ambient sound and an adjustable timer." />
 <meta property="og:type" content="website" />
@@ -409,6 +413,13 @@
 
   startBtn.addEventListener('click', start);
   stopBtn.addEventListener('click', () => stop(false));
+
+  // Register service worker for offline support
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    });
+  }
 </script>
 </body>
 </html>
