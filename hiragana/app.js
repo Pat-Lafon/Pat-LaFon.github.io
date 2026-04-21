@@ -255,7 +255,7 @@ export function App() {
       window.speechSynthesis.cancel();
       const utter = new SpeechSynthesisUtterance(kana);
       utter.lang = "ja-JP";
-      utter.rate = 0.6;
+      utter.rate = 0.35;
       if (jaVoiceRef.current) utter.voice = jaVoiceRef.current;
       window.speechSynthesis.speak(utter);
     } catch (e) { /* skip */ }
