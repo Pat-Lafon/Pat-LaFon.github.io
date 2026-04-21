@@ -23,7 +23,7 @@ jobs:
           - url: https://pat-lafon.github.io/meditation/
             name: meditation
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Lighthouse (${{ matrix.preset }} - ${{ matrix.page.name }})
         id: lighthouse
