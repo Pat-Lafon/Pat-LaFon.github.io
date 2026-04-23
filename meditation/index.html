@@ -253,34 +253,37 @@
   }
 
   function ensureAudio() {
-    if (!audioCtx) {
-      const Ctx = window.AudioContext || window.webkitAudioContext;
-      audioCtx = new Ctx();
-    }
-    if (audioCtx.state === 'suspended') audioCtx.resume();
+    try {
+      if (!audioCtx) {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return;
+        audioCtx = new Ctx();
+      }
+      if (audioCtx.state === 'suspended') audioCtx.resume();
 
-    if (!noiseSource) {
-      gainNode = audioCtx.createGain();
-      gainNode.gain.value = 0.0001;
+      if (!noiseSource) {
+        gainNode = audioCtx.createGain();
+        gainNode.gain.value = 0.0001;
 
-      // Two cascaded lowpass filters for a much gentler rolloff (no harshness)
-      filterNode = audioCtx.createBiquadFilter();
-      filterNode.type = 'lowpass';
-      filterNode.frequency.value = FILTER_LOW;
-      filterNode.Q.value = 0.5;
+        // Two cascaded lowpass filters for a much gentler rolloff (no harshness)
+        filterNode = audioCtx.createBiquadFilter();
+        filterNode.type = 'lowpass';
+        filterNode.frequency.value = FILTER_LOW;
+        filterNode.Q.value = 0.5;
 
-      filterNode2 = audioCtx.createBiquadFilter();
-      filterNode2.type = 'lowpass';
-      filterNode2.frequency.value = FILTER_LOW;
-      filterNode2.Q.value = 0.5;
+        filterNode2 = audioCtx.createBiquadFilter();
+        filterNode2.type = 'lowpass';
+        filterNode2.frequency.value = FILTER_LOW;
+        filterNode2.Q.value = 0.5;
 
-      noiseSource = audioCtx.createBufferSource();
-      noiseSource.buffer = createNoiseBuffer(audioCtx);
-      noiseSource.loop = true;
+        noiseSource = audioCtx.createBufferSource();
+        noiseSource.buffer = createNoiseBuffer(audioCtx);
+        noiseSource.loop = true;
 
-      noiseSource.connect(filterNode).connect(filterNode2).connect(gainNode).connect(audioCtx.destination);
-      noiseSource.start();
-    }
+        noiseSource.connect(filterNode).connect(filterNode2).connect(gainNode).connect(audioCtx.destination);
+        noiseSource.start();
+      }
+    } catch (e) { /* Audio unsupported — app works without sound */ }
   }
 
   function playChime(freq) {
@@ -425,7 +428,7 @@
     running = false;
     paused = true;
     if (rafId) cancelAnimationFrame(rafId);
-    if (gainNode && audioCtx) gainNode.gain.setTargetAtTime(0.0001, audioCtx.currentTime, 0.05);
+    stopAudio();
     phaseEl.textContent = 'Paused';
     updateControls();
   }
@@ -443,11 +446,22 @@
     updateControls();
   }
 
+  function stopAudio() {
+    if (noiseSource) {
+      try { noiseSource.stop(); } catch (e) { /* already stopped */ }
+      noiseSource.disconnect();
+      noiseSource = null;
+    }
+    if (filterNode) { filterNode.disconnect(); filterNode = null; }
+    if (filterNode2) { filterNode2.disconnect(); filterNode2 = null; }
+    if (gainNode) { gainNode.disconnect(); gainNode = null; }
+  }
+
   function stop(completed = false) {
     running = false;
     paused = false;
     if (rafId) cancelAnimationFrame(rafId);
-    if (gainNode && audioCtx) gainNode.gain.setTargetAtTime(0.0001, audioCtx.currentTime, 0.05);
+    stopAudio();
     phaseEl.textContent = completed ? 'Complete' : 'Ready';
     countEl.textContent = '—';
     dot.style.transform = `translate(0px, 0px)`;
