@@ -139,15 +139,6 @@
   }
   button:hover { background: rgba(96, 165, 250, 0.3); }
   button:active { transform: scale(0.97); }
-  .toggle-row {
-    margin-top: 24px;
-    display: flex;
-    gap: 16px;
-    font-size: 0.85rem;
-    opacity: 0.7;
-  }
-  label { cursor: pointer; }
-  input[type="checkbox"] { margin-right: 6px; cursor: pointer; }
   .duration-row {
     display: flex;
     gap: 8px;
@@ -402,9 +393,6 @@
 
     <div class="remaining" id="remaining"></div>
 
-    <div class="toggle-row">
-      <label><input type="checkbox" id="soundToggle" checked> Breath sounds</label>
-    </div>
   </div>
 
   <!-- ===== Guided View ===== -->
@@ -468,7 +456,6 @@ const startBtn = document.getElementById('startBtn');
 const pauseBtn = document.getElementById('pauseBtn');
 const resumeBtn = document.getElementById('resumeBtn');
 const stopBtn = document.getElementById('stopBtn');
-const soundToggle = document.getElementById('soundToggle');
 const remainingEl = document.getElementById('remaining');
 const chips = document.querySelectorAll('.chip');
 
@@ -555,8 +542,12 @@ function ensureAudio() {
   } catch (e) { /* Audio unsupported */ }
 }
 
+function vibrate(ms) {
+  try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {}
+}
+
 function playChime(freq) {
-  if (!soundToggle.checked || !audioCtx) return;
+  if (!audioCtx) { vibrate(40); return; }
   const t = audioCtx.currentTime;
   const osc = audioCtx.createOscillator();
   const g = audioCtx.createGain();
@@ -573,7 +564,6 @@ function playChime(freq) {
 function setBreathSound(progress) {
   if (!gainNode || !audioCtx) return;
   const t = audioCtx.currentTime;
-  if (!soundToggle.checked) { gainNode.gain.setTargetAtTime(0.0001, t, 0.05); return; }
   let cutoff, gain;
   switch (phaseIdx) {
     case PHASE_INHALE: cutoff = FILTER_LOW + (FILTER_HIGH - FILTER_LOW) * progress; gain = MAX_GAIN * (0.15 + 0.85 * progress); break;
