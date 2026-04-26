@@ -3,15 +3,15 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Box Breathing</title>
-<meta name="description" content="A calm, minimal box breathing guide — 4-4-4-4 rhythm with soft ambient sound and an adjustable timer." />
+<title>Meditation</title>
+<meta name="description" content="Box breathing guide and guided meditation sessions with offline support." />
 <meta name="theme-color" content="#0f172a" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <link rel="manifest" href="manifest.json" />
 <link rel="apple-touch-icon" href="icon-192.png" />
-<meta property="og:title" content="Box Breathing" />
-<meta property="og:description" content="A calm, minimal box breathing guide with soft ambient sound and an adjustable timer." />
+<meta property="og:title" content="Meditation" />
+<meta property="og:description" content="Box breathing and guided meditation with offline support." />
 <meta property="og:type" content="website" />
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect x='15' y='15' width='70' height='70' rx='10' fill='none' stroke='%2360a5fa' stroke-width='6'/%3E%3Ccircle cx='85' cy='15' r='8' fill='%2360a5fa'/%3E%3C/svg%3E" />
 <style>
@@ -24,10 +24,44 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
     padding: 20px;
+    overflow-x: hidden;
+  }
+
+  /* --- Tabs --- */
+  .tab-bar {
+    display: flex;
+    gap: 0;
+    margin-bottom: 32px;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    border-radius: 8px;
     overflow: hidden;
   }
+  .tab-btn {
+    background: transparent;
+    color: #94a3b8;
+    border: none;
+    padding: 10px 24px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    font-family: inherit;
+    transition: all 0.2s ease;
+    border-radius: 0;
+  }
+  .tab-btn:hover { background: rgba(148, 163, 184, 0.1); }
+  .tab-btn.active {
+    background: rgba(96, 165, 250, 0.2);
+    color: #e2e8f0;
+  }
+  .view { display: none; width: 100%; max-width: 480px; }
+  .view.active {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* --- Breathe view --- */
   h1 {
     font-size: 1.5rem;
     font-weight: 300;
@@ -145,365 +179,780 @@
     letter-spacing: 0.05em;
     min-height: 1.2em;
   }
+
+  /* --- Guided view --- */
+  .session-list {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+    max-height: 50vh;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+  .session-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: rgba(148, 163, 184, 0.08);
+    border: 1px solid rgba(148, 163, 184, 0.15);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .session-item:hover { background: rgba(96, 165, 250, 0.12); border-color: rgba(96, 165, 250, 0.3); }
+  .session-item.playing { background: rgba(96, 165, 250, 0.15); border-color: rgba(96, 165, 250, 0.5); }
+  .session-info { flex: 1; min-width: 0; }
+  .session-title {
+    font-size: 0.95rem;
+    font-weight: 400;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .session-meta {
+    font-size: 0.75rem;
+    opacity: 0.5;
+    margin-top: 2px;
+  }
+  .session-duration {
+    font-size: 0.8rem;
+    opacity: 0.6;
+    white-space: nowrap;
+  }
+  .session-cached {
+    color: #34d399;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+  }
+
+  /* --- Audio player --- */
+  .player {
+    width: 100%;
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid rgba(96, 165, 250, 0.3);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+    display: none;
+  }
+  .player.active { display: block; }
+  .player-title {
+    font-size: 0.9rem;
+    font-weight: 400;
+    margin-bottom: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .player-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .play-btn {
+    background: rgba(96, 165, 250, 0.2);
+    border: 1px solid rgba(96, 165, 250, 0.5);
+    color: #e2e8f0;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 0;
+    flex-shrink: 0;
+  }
+  .progress-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .progress-bar {
+    width: 100%;
+    height: 6px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: rgba(148, 163, 184, 0.2);
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+  }
+  .progress-bar::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #60a5fa;
+    cursor: pointer;
+  }
+  .progress-bar::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #60a5fa;
+    cursor: pointer;
+    border: none;
+  }
+  .progress-bar::-webkit-slider-runnable-track {
+    height: 6px;
+    border-radius: 3px;
+  }
+  .player-time {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    opacity: 0.5;
+  }
+  .player-close {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 1.2rem;
+    padding: 4px;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .player-close:hover { color: #e2e8f0; background: none; }
+
+  /* --- Cache management --- */
+  .cache-bar {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.75rem;
+    opacity: 0.5;
+    padding: 8px 0;
+  }
+  .cache-clear {
+    background: none;
+    border: none;
+    color: #f87171;
+    cursor: pointer;
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    font-family: inherit;
+  }
+  .cache-clear:hover { opacity: 0.8; background: none; }
+
+  /* --- Attribution --- */
+  .attribution {
+    font-size: 0.65rem;
+    opacity: 0.35;
+    text-align: center;
+    margin-top: 12px;
+    line-height: 1.5;
+    max-width: 400px;
+  }
+  .attribution a { color: inherit; }
 </style>
 </head>
 <body>
-  <h1>Box Breathing</h1>
-  <div class="subtitle">4 · 4 · 4 · 4</div>
 
-  <div class="box-container">
-    <div class="box"></div>
-    <div class="dot" id="dot"></div>
-    <div class="center-text">
-      <div class="phase" id="phase">Ready</div>
-      <div class="count" id="count">—</div>
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="breathe">Breathe</button>
+    <button class="tab-btn" data-tab="guided">Guided</button>
+  </div>
+
+  <!-- ===== Breathe View ===== -->
+  <div class="view active" id="breathe-view">
+    <h1>Box Breathing</h1>
+    <div class="subtitle">4 · 4 · 4 · 4</div>
+
+    <div class="box-container">
+      <div class="box"></div>
+      <div class="dot" id="dot"></div>
+      <div class="center-text">
+        <div class="phase" id="phase">Ready</div>
+        <div class="count" id="count">&mdash;</div>
+      </div>
+    </div>
+
+    <div class="duration-row">
+      <button class="chip" data-minutes="0">&infin; Open</button>
+      <button class="chip" data-minutes="2">2 min</button>
+      <button class="chip active" data-minutes="5">5 min</button>
+      <button class="chip" data-minutes="10">10 min</button>
+      <button class="chip" data-minutes="15">15 min</button>
+      <button class="chip" data-minutes="20">20 min</button>
+    </div>
+
+    <div class="controls">
+      <button id="startBtn">Start</button>
+      <button id="pauseBtn" style="display:none">Pause</button>
+      <button id="resumeBtn" style="display:none">Resume</button>
+      <button id="stopBtn" style="display:none">Stop</button>
+    </div>
+
+    <div class="remaining" id="remaining"></div>
+
+    <div class="toggle-row">
+      <label><input type="checkbox" id="soundToggle" checked> Breath sounds</label>
     </div>
   </div>
 
-  <div class="duration-row">
-    <button class="chip" data-minutes="0">∞ Open</button>
-    <button class="chip" data-minutes="2">2 min</button>
-    <button class="chip active" data-minutes="5">5 min</button>
-    <button class="chip" data-minutes="10">10 min</button>
-    <button class="chip" data-minutes="15">15 min</button>
-    <button class="chip" data-minutes="20">20 min</button>
+  <!-- ===== Guided View ===== -->
+  <div class="view" id="guided-view">
+    <div class="player" id="player">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="player-title" id="playerTitle"></div>
+        <button class="player-close" id="playerClose" title="Close">&times;</button>
+      </div>
+      <div class="player-controls">
+        <button class="play-btn" id="playBtn">&#9654;</button>
+        <div class="progress-wrap">
+          <input type="range" class="progress-bar" id="progressBar" min="0" max="1000" value="0" />
+          <div class="player-time">
+            <span id="elapsed">0:00</span>
+            <span id="totalTime">0:00</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="session-list" id="sessionList"></div>
+
+    <div class="cache-bar" id="cacheBar">
+      <span id="cacheSize">Cached: 0 MB</span>
+      <button class="cache-clear" id="cacheClear">Clear all downloads</button>
+    </div>
+
+    <div class="attribution">
+      UCLA meditations &copy; UC Regents, <a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank">CC BY-NC-ND 4.0</a>.
+      DoD meditations via <a href="https://www.dvidshub.net/" target="_blank">DVIDS</a>, public domain.
+      VA meditations via <a href="https://www.warrelatedillness.va.gov/" target="_blank">VA WRIISC</a>.
+    </div>
   </div>
 
-  <div class="controls">
-    <button id="startBtn">Start</button>
-    <button id="pauseBtn" style="display:none">Pause</button>
-    <button id="resumeBtn" style="display:none">Resume</button>
-    <button id="stopBtn" style="display:none">Stop</button>
-  </div>
-
-  <div class="remaining" id="remaining"></div>
-
-  <div class="toggle-row">
-    <label><input type="checkbox" id="soundToggle" checked> Breath sounds</label>
-  </div>
+<audio id="audio" preload="none"></audio>
 
 <script>
-  const dot = document.getElementById('dot');
-  const phaseEl = document.getElementById('phase');
-  const countEl = document.getElementById('count');
-  const startBtn = document.getElementById('startBtn');
-  const pauseBtn = document.getElementById('pauseBtn');
-  const resumeBtn = document.getElementById('resumeBtn');
-  const stopBtn = document.getElementById('stopBtn');
-  const soundToggle = document.getElementById('soundToggle');
-  const remainingEl = document.getElementById('remaining');
-  const chips = document.querySelectorAll('.chip');
-
-  let sessionMinutes = 5; // default
-  let sessionStart = 0;
-  let sessionEndChimePlayed = false;
-
-  const SIDE = 280; // matches box width
-  const PHASE_MS = 4000;
-  const PHASE_INHALE = 0;
-  const PHASE_HOLD_FULL = 1;
-  const PHASE_EXHALE = 2;
-  const PHASE_HOLD_EMPTY = 3;
-  const phases = ['Inhale', 'Hold', 'Exhale', 'Hold'];
-
-  // Filter sweep range — kept low and narrow for a soft, mellow sound
-  const FILTER_LOW = 180;
-  const FILTER_HIGH = 700;
-  const MAX_GAIN = 0.55;
-  const CHIME_DURATION = 0.6;
-
-  let running = false;
-  let paused = false;
-  let rafId = null;
-  let phaseIdx = 0;
-  let phaseStart = 0;
-  let pausedElapsed = 0; // how far into current phase when paused
-  let pausedSessionElapsed = 0; // how far into session when paused
-  let audioCtx = null;
-  let noiseSource = null;
-  let filterNode = null;
-  let filterNode2 = null;
-  let gainNode = null;
-
-  function updateControls() {
-    const active = running || paused;
-    startBtn.style.display = active ? 'none' : '';
-    pauseBtn.style.display = running ? '' : 'none';
-    resumeBtn.style.display = paused ? '' : 'none';
-    stopBtn.style.display = active ? '' : 'none';
-    chips.forEach(c => {
-      c.style.opacity = active ? '0.4' : '';
-      c.style.pointerEvents = active ? 'none' : '';
-    });
-  }
-
-  function createNoiseBuffer(ctx) {
-    // 3 seconds of brown noise — much softer/deeper than pink, like distant ocean
-    const length = ctx.sampleRate * 3;
-    const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    let lastOut = 0;
-    for (let i = 0; i < length; i++) {
-      const white = Math.random() * 2 - 1;
-      // Brown noise: integrated white noise (low-frequency dominant)
-      lastOut = (lastOut + 0.02 * white) / 1.02;
-      data[i] = lastOut * 3.5; // boost since brown noise is quiet
-    }
-    return buffer;
-  }
-
-  function ensureAudio() {
-    try {
-      if (!audioCtx) {
-        const Ctx = window.AudioContext || window.webkitAudioContext;
-        if (!Ctx) return;
-        audioCtx = new Ctx();
-      }
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-
-      if (!noiseSource) {
-        gainNode = audioCtx.createGain();
-        gainNode.gain.value = 0.0001;
-
-        // Two cascaded lowpass filters for a much gentler rolloff (no harshness)
-        filterNode = audioCtx.createBiquadFilter();
-        filterNode.type = 'lowpass';
-        filterNode.frequency.value = FILTER_LOW;
-        filterNode.Q.value = 0.5;
-
-        filterNode2 = audioCtx.createBiquadFilter();
-        filterNode2.type = 'lowpass';
-        filterNode2.frequency.value = FILTER_LOW;
-        filterNode2.Q.value = 0.5;
-
-        noiseSource = audioCtx.createBufferSource();
-        noiseSource.buffer = createNoiseBuffer(audioCtx);
-        noiseSource.loop = true;
-
-        noiseSource.connect(filterNode).connect(filterNode2).connect(gainNode).connect(audioCtx.destination);
-        noiseSource.start();
-      }
-    } catch (e) { /* Audio unsupported — app works without sound */ }
-  }
-
-  function playChime(freq) {
-    // Soft sine "ping" — marks phase transitions clearly but gently
-    if (!soundToggle.checked || !audioCtx) return;
-    const t = audioCtx.currentTime;
-    const osc = audioCtx.createOscillator();
-    const g = audioCtx.createGain();
-    osc.type = 'sine';
-    osc.frequency.value = freq;
-    g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(0.1, t + 0.04);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + CHIME_DURATION);
-    osc.connect(g).connect(audioCtx.destination);
-    osc.start(t);
-    osc.stop(t + CHIME_DURATION + 0.05);
-  }
-
-  function setBreathSound(progress) {
-    if (!gainNode || !audioCtx) return;
-    const t = audioCtx.currentTime;
-
-    if (!soundToggle.checked) {
-      gainNode.gain.setTargetAtTime(0.0001, t, 0.05);
-      return;
-    }
-
-    let cutoff, gain;
-    switch (phaseIdx) {
-      case PHASE_INHALE: // filter opens slightly, gentle swell
-        cutoff = FILTER_LOW + (FILTER_HIGH - FILTER_LOW) * progress;
-        gain = MAX_GAIN * (0.15 + 0.85 * progress);
-        break;
-      case PHASE_HOLD_FULL: // sustained, mellow
-        cutoff = FILTER_HIGH;
-        gain = MAX_GAIN * 0.5;
-        break;
-      case PHASE_EXHALE: // filter closes, gentle fade
-        cutoff = FILTER_HIGH - (FILTER_HIGH - FILTER_LOW) * progress;
-        gain = MAX_GAIN * (1 - 0.85 * progress) * 0.85 + 0.02;
-        break;
-      case PHASE_HOLD_EMPTY: // very quiet
-        cutoff = FILTER_LOW;
-        gain = 0.02;
-        break;
-    }
-    filterNode.frequency.setTargetAtTime(cutoff, t, 0.1);
-    filterNode2.frequency.setTargetAtTime(cutoff, t, 0.1);
-    gainNode.gain.setTargetAtTime(Math.max(gain, 0.0001), t, 0.1);
-  }
-
-  function positionDot(progress) {
-    // progress 0..1 along current side
-    let x = 0, y = 0;
-    switch (phaseIdx) {
-      case PHASE_INHALE:    x = progress * SIDE; y = 0; break;            // top edge L→R
-      case PHASE_HOLD_FULL: x = SIDE; y = progress * SIDE; break;          // right edge T→B
-      case PHASE_EXHALE:    x = SIDE - progress * SIDE; y = SIDE; break;   // bottom edge R→L
-      case PHASE_HOLD_EMPTY: x = 0; y = SIDE - progress * SIDE; break;     // left edge B→T
-    }
-    dot.style.transform = `translate(${x}px, ${y}px)`;
-  }
-
-  function startPhase() {
-    phaseStart = performance.now();
-    phaseEl.textContent = phases[phaseIdx];
-    // Distinct chime per phase: ascending for inhale, mid for holds, descending for exhale
-    const chimeFreqs = [659, 523, 392, 523]; // E5, C5, G4, C5
-    playChime(chimeFreqs[phaseIdx]);
-    // Brief visual pulse on the phase label
-    phaseEl.style.transition = 'none';
-    phaseEl.style.opacity = '0.4';
-    phaseEl.style.transform = 'scale(0.95)';
-    requestAnimationFrame(() => {
-      phaseEl.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
-      phaseEl.style.opacity = '1';
-      phaseEl.style.transform = 'scale(1)';
-    });
-  }
-
-  function formatTime(ms) {
-    const totalSec = Math.max(0, Math.ceil(ms / 1000));
-    const m = Math.floor(totalSec / 60);
-    const s = totalSec % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
-  }
-
-  function updateRemaining(now) {
-    if (sessionMinutes === 0) {
-      const elapsed = now - sessionStart;
-      remainingEl.textContent = `Elapsed ${formatTime(elapsed)}`;
-      return;
-    }
-    const totalMs = sessionMinutes * 60 * 1000;
-    const left = totalMs - (now - sessionStart);
-    remainingEl.textContent = `${formatTime(left)} remaining`;
-    if (left <= 0 && !sessionEndChimePlayed) {
-      sessionEndChimePlayed = true;
-      // Triple chime to signal completion
-      playChime(523);
-      setTimeout(() => playChime(659), 350);
-      setTimeout(() => playChime(784), 700);
-      setTimeout(() => stop(true), 1400);
-    }
-  }
-
-  function loop(now) {
-    if (!running) return;
-    const elapsed = now - phaseStart;
-    const progress = Math.min(elapsed / PHASE_MS, 1);
-    const secondsLeft = Math.max(1, Math.ceil((PHASE_MS - elapsed) / 1000));
-    countEl.textContent = secondsLeft;
-    positionDot(progress);
-    setBreathSound(progress);
-    updateRemaining(now);
-
-    if (elapsed >= PHASE_MS) {
-      phaseIdx = (phaseIdx + 1) % 4;
-      startPhase();
-    }
-    rafId = requestAnimationFrame(loop);
-  }
-
-  function start() {
-    if (running) return;
-    running = true;
-    paused = false;
-    phaseIdx = 0;
-    sessionStart = performance.now();
-    sessionEndChimePlayed = false;
-    ensureAudio();
-    startPhase();
-    rafId = requestAnimationFrame(loop);
-    updateControls();
-  }
-
-  function pause() {
-    if (!running) return;
-    const now = performance.now();
-    pausedElapsed = now - phaseStart;
-    pausedSessionElapsed = now - sessionStart;
-    running = false;
-    paused = true;
-    if (rafId) cancelAnimationFrame(rafId);
-    stopAudio();
-    phaseEl.textContent = 'Paused';
-    updateControls();
-  }
-
-  function resume() {
-    if (!paused) return;
-    paused = false;
-    running = true;
-    const now = performance.now();
-    phaseStart = now - pausedElapsed;
-    sessionStart = now - pausedSessionElapsed;
-    ensureAudio();
-    phaseEl.textContent = phases[phaseIdx];
-    rafId = requestAnimationFrame(loop);
-    updateControls();
-  }
-
-  function stopAudio() {
-    if (noiseSource) {
-      try { noiseSource.stop(); } catch (e) { /* already stopped */ }
-      noiseSource.disconnect();
-      noiseSource = null;
-    }
-    if (filterNode) { filterNode.disconnect(); filterNode = null; }
-    if (filterNode2) { filterNode2.disconnect(); filterNode2 = null; }
-    if (gainNode) { gainNode.disconnect(); gainNode = null; }
-  }
-
-  function stop(completed = false) {
-    running = false;
-    paused = false;
-    if (rafId) cancelAnimationFrame(rafId);
-    stopAudio();
-    phaseEl.textContent = completed ? 'Complete' : 'Ready';
-    countEl.textContent = '—';
-    dot.style.transform = `translate(0px, 0px)`;
-    if (!completed) remainingEl.textContent = '';
-    updateControls();
-  }
-
-  // Duration chip selection
-  chips.forEach(chip => {
-    chip.addEventListener('click', () => {
-      if (running || paused) return;
-      chips.forEach(c => c.classList.remove('active'));
-      chip.classList.add('active');
-      sessionMinutes = parseInt(chip.dataset.minutes, 10);
-    });
+// =============================================
+// Tab navigation
+// =============================================
+const tabBtns = document.querySelectorAll('.tab-btn');
+const views = document.querySelectorAll('.view');
+tabBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    tabBtns.forEach(b => b.classList.remove('active'));
+    views.forEach(v => v.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab + '-view').classList.add('active');
   });
+});
 
-  startBtn.addEventListener('click', start);
-  pauseBtn.addEventListener('click', pause);
-  resumeBtn.addEventListener('click', resume);
-  stopBtn.addEventListener('click', () => stop(false));
+// =============================================
+// Breathe view (box breathing) — unchanged logic
+// =============================================
+const dot = document.getElementById('dot');
+const phaseEl = document.getElementById('phase');
+const countEl = document.getElementById('count');
+const startBtn = document.getElementById('startBtn');
+const pauseBtn = document.getElementById('pauseBtn');
+const resumeBtn = document.getElementById('resumeBtn');
+const stopBtn = document.getElementById('stopBtn');
+const soundToggle = document.getElementById('soundToggle');
+const remainingEl = document.getElementById('remaining');
+const chips = document.querySelectorAll('.chip');
 
-  // Keyboard shortcuts: Enter to start/resume, Escape to stop, Space to pause/resume
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      if (!running && !paused) start();
-      else if (paused) resume();
-    } else if (e.key === 'Escape') {
-      if (running || paused) stop(false);
-    } else if (e.key === ' ') {
-      e.preventDefault();
-      if (running) pause();
-      else if (paused) resume();
-    }
+let sessionMinutes = 5;
+let sessionStart = 0;
+let sessionEndChimePlayed = false;
+
+const SIDE = 280;
+const PHASE_MS = 4000;
+const PHASE_INHALE = 0;
+const PHASE_HOLD_FULL = 1;
+const PHASE_EXHALE = 2;
+const PHASE_HOLD_EMPTY = 3;
+const phases = ['Inhale', 'Hold', 'Exhale', 'Hold'];
+
+const FILTER_LOW = 180;
+const FILTER_HIGH = 700;
+const MAX_GAIN = 0.55;
+const CHIME_DURATION = 0.6;
+
+let running = false;
+let paused = false;
+let rafId = null;
+let phaseIdx = 0;
+let phaseStart = 0;
+let pausedElapsed = 0;
+let pausedSessionElapsed = 0;
+let audioCtx = null;
+let noiseSource = null;
+let filterNode = null;
+let filterNode2 = null;
+let gainNode = null;
+
+function updateControls() {
+  const active = running || paused;
+  startBtn.style.display = active ? 'none' : '';
+  pauseBtn.style.display = running ? '' : 'none';
+  resumeBtn.style.display = paused ? '' : 'none';
+  stopBtn.style.display = active ? '' : 'none';
+  chips.forEach(c => {
+    c.style.opacity = active ? '0.4' : '';
+    c.style.pointerEvents = active ? 'none' : '';
   });
+}
 
-  // Register service worker for offline support
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js').catch(() => {});
-    });
+function createNoiseBuffer(ctx) {
+  const length = ctx.sampleRate * 3;
+  const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  let lastOut = 0;
+  for (let i = 0; i < length; i++) {
+    const white = Math.random() * 2 - 1;
+    lastOut = (lastOut + 0.02 * white) / 1.02;
+    data[i] = lastOut * 3.5;
   }
+  return buffer;
+}
+
+function ensureAudio() {
+  try {
+    if (!audioCtx) {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      audioCtx = new Ctx();
+    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    if (!noiseSource) {
+      gainNode = audioCtx.createGain();
+      gainNode.gain.value = 0.0001;
+      filterNode = audioCtx.createBiquadFilter();
+      filterNode.type = 'lowpass';
+      filterNode.frequency.value = FILTER_LOW;
+      filterNode.Q.value = 0.5;
+      filterNode2 = audioCtx.createBiquadFilter();
+      filterNode2.type = 'lowpass';
+      filterNode2.frequency.value = FILTER_LOW;
+      filterNode2.Q.value = 0.5;
+      noiseSource = audioCtx.createBufferSource();
+      noiseSource.buffer = createNoiseBuffer(audioCtx);
+      noiseSource.loop = true;
+      noiseSource.connect(filterNode).connect(filterNode2).connect(gainNode).connect(audioCtx.destination);
+      noiseSource.start();
+    }
+  } catch (e) { /* Audio unsupported */ }
+}
+
+function playChime(freq) {
+  if (!soundToggle.checked || !audioCtx) return;
+  const t = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  osc.type = 'sine';
+  osc.frequency.value = freq;
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(0.1, t + 0.04);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + CHIME_DURATION);
+  osc.connect(g).connect(audioCtx.destination);
+  osc.start(t);
+  osc.stop(t + CHIME_DURATION + 0.05);
+}
+
+function setBreathSound(progress) {
+  if (!gainNode || !audioCtx) return;
+  const t = audioCtx.currentTime;
+  if (!soundToggle.checked) { gainNode.gain.setTargetAtTime(0.0001, t, 0.05); return; }
+  let cutoff, gain;
+  switch (phaseIdx) {
+    case PHASE_INHALE: cutoff = FILTER_LOW + (FILTER_HIGH - FILTER_LOW) * progress; gain = MAX_GAIN * (0.15 + 0.85 * progress); break;
+    case PHASE_HOLD_FULL: cutoff = FILTER_HIGH; gain = MAX_GAIN * 0.5; break;
+    case PHASE_EXHALE: cutoff = FILTER_HIGH - (FILTER_HIGH - FILTER_LOW) * progress; gain = MAX_GAIN * (1 - 0.85 * progress) * 0.85 + 0.02; break;
+    case PHASE_HOLD_EMPTY: cutoff = FILTER_LOW; gain = 0.02; break;
+  }
+  filterNode.frequency.setTargetAtTime(cutoff, t, 0.1);
+  filterNode2.frequency.setTargetAtTime(cutoff, t, 0.1);
+  gainNode.gain.setTargetAtTime(Math.max(gain, 0.0001), t, 0.1);
+}
+
+function positionDot(progress) {
+  let x = 0, y = 0;
+  switch (phaseIdx) {
+    case PHASE_INHALE:     x = progress * SIDE; y = 0; break;
+    case PHASE_HOLD_FULL:  x = SIDE; y = progress * SIDE; break;
+    case PHASE_EXHALE:     x = SIDE - progress * SIDE; y = SIDE; break;
+    case PHASE_HOLD_EMPTY: x = 0; y = SIDE - progress * SIDE; break;
+  }
+  dot.style.transform = `translate(${x}px, ${y}px)`;
+}
+
+function startPhase() {
+  phaseStart = performance.now();
+  phaseEl.textContent = phases[phaseIdx];
+  const chimeFreqs = [659, 523, 392, 523];
+  playChime(chimeFreqs[phaseIdx]);
+  phaseEl.style.transition = 'none';
+  phaseEl.style.opacity = '0.4';
+  phaseEl.style.transform = 'scale(0.95)';
+  requestAnimationFrame(() => {
+    phaseEl.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+    phaseEl.style.opacity = '1';
+    phaseEl.style.transform = 'scale(1)';
+  });
+}
+
+function breathFormatTime(ms) {
+  const totalSec = Math.max(0, Math.ceil(ms / 1000));
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+function updateRemaining(now) {
+  if (sessionMinutes === 0) {
+    remainingEl.textContent = `Elapsed ${breathFormatTime(now - sessionStart)}`;
+    return;
+  }
+  const totalMs = sessionMinutes * 60 * 1000;
+  const left = totalMs - (now - sessionStart);
+  remainingEl.textContent = `${breathFormatTime(left)} remaining`;
+  if (left <= 0 && !sessionEndChimePlayed) {
+    sessionEndChimePlayed = true;
+    playChime(523);
+    setTimeout(() => playChime(659), 350);
+    setTimeout(() => playChime(784), 700);
+    setTimeout(() => breathStop(true), 1400);
+  }
+}
+
+function loop(now) {
+  if (!running) return;
+  const elapsed = now - phaseStart;
+  const progress = Math.min(elapsed / PHASE_MS, 1);
+  countEl.textContent = Math.max(1, Math.ceil((PHASE_MS - elapsed) / 1000));
+  positionDot(progress);
+  setBreathSound(progress);
+  updateRemaining(now);
+  if (elapsed >= PHASE_MS) { phaseIdx = (phaseIdx + 1) % 4; startPhase(); }
+  rafId = requestAnimationFrame(loop);
+}
+
+function breathStart() {
+  if (running) return;
+  running = true; paused = false; phaseIdx = 0;
+  sessionStart = performance.now();
+  sessionEndChimePlayed = false;
+  ensureAudio(); startPhase();
+  rafId = requestAnimationFrame(loop);
+  updateControls();
+}
+
+function breathPause() {
+  if (!running) return;
+  const now = performance.now();
+  pausedElapsed = now - phaseStart;
+  pausedSessionElapsed = now - sessionStart;
+  running = false; paused = true;
+  if (rafId) cancelAnimationFrame(rafId);
+  stopBreathAudio();
+  phaseEl.textContent = 'Paused';
+  updateControls();
+}
+
+function breathResume() {
+  if (!paused) return;
+  paused = false; running = true;
+  const now = performance.now();
+  phaseStart = now - pausedElapsed;
+  sessionStart = now - pausedSessionElapsed;
+  ensureAudio();
+  phaseEl.textContent = phases[phaseIdx];
+  rafId = requestAnimationFrame(loop);
+  updateControls();
+}
+
+function stopBreathAudio() {
+  if (noiseSource) { try { noiseSource.stop(); } catch (e) {} noiseSource.disconnect(); noiseSource = null; }
+  if (filterNode) { filterNode.disconnect(); filterNode = null; }
+  if (filterNode2) { filterNode2.disconnect(); filterNode2 = null; }
+  if (gainNode) { gainNode.disconnect(); gainNode = null; }
+}
+
+function breathStop(completed = false) {
+  running = false; paused = false;
+  if (rafId) cancelAnimationFrame(rafId);
+  stopBreathAudio();
+  phaseEl.textContent = completed ? 'Complete' : 'Ready';
+  countEl.textContent = '\u2014';
+  dot.style.transform = 'translate(0px, 0px)';
+  if (!completed) remainingEl.textContent = '';
+  updateControls();
+}
+
+chips.forEach(chip => {
+  chip.addEventListener('click', () => {
+    if (running || paused) return;
+    chips.forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    sessionMinutes = parseInt(chip.dataset.minutes, 10);
+  });
+});
+
+startBtn.addEventListener('click', breathStart);
+pauseBtn.addEventListener('click', breathPause);
+resumeBtn.addEventListener('click', breathResume);
+stopBtn.addEventListener('click', () => breathStop(false));
+
+document.addEventListener('keydown', (e) => {
+  // Only handle shortcuts when breathe view is active
+  if (!document.getElementById('breathe-view').classList.contains('active')) return;
+  if (e.key === 'Enter') {
+    if (!running && !paused) breathStart();
+    else if (paused) breathResume();
+  } else if (e.key === 'Escape') {
+    if (running || paused) breathStop(false);
+  } else if (e.key === ' ') {
+    e.preventDefault();
+    if (running) breathPause();
+    else if (paused) breathResume();
+  }
+});
+
+// =============================================
+// Guided view — session data, player, caching
+// =============================================
+const AUDIO_CACHE = 'meditation-audio';
+
+const SESSIONS = [
+  // UCLA Mindful (CC BY-NC-ND 4.0)
+  { id: 'ucla-body-scan-short', title: 'Short Body Scan', duration: '3 min', source: 'UCLA Mindful', type: 'Body Scan',
+    url: 'https://d1cy5zxxhbcbkk.cloudfront.net/guided-meditations/Body-Scan-Meditation.mp3' },
+  { id: 'ucla-breathing', title: 'Breathing Meditation', duration: '5 min', source: 'UCLA Mindful', type: 'Breathing',
+    url: 'https://d1cy5zxxhbcbkk.cloudfront.net/guided-meditations/01_Breathing_Meditation.mp3' },
+  { id: 'ucla-difficulties', title: 'Working with Difficulties', duration: '7 min', source: 'UCLA Mindful', type: 'Mindfulness',
+    url: 'https://d1cy5zxxhbcbkk.cloudfront.net/guided-meditations/04_Meditation_for_Working_with_Difficulties.mp3' },
+  { id: 'ucla-loving-kindness', title: 'Loving Kindness', duration: '9 min', source: 'UCLA Mindful', type: 'Compassion',
+    url: 'https://d1cy5zxxhbcbkk.cloudfront.net/guided-meditations/05_Loving_Kindness_Meditation.mp3' },
+  { id: 'ucla-breath-sound-body', title: 'Breath, Sound & Body', duration: '12 min', source: 'UCLA Mindful', type: 'Mindfulness',
+    url: 'https://d1cy5zxxhbcbkk.cloudfront.net/guided-meditations/02_Breath_Sound_Body_Meditation.mp3' },
+  { id: 'ucla-body-scan-sleep', title: 'Body Scan for Sleep', duration: '13 min', source: 'UCLA Mindful', type: 'Body Scan',
+    url: 'https://d1cy5zxxhbcbkk.cloudfront.net/guided-meditations/Body-Scan-for-Sleep.mp3' },
+  { id: 'ucla-complete', title: 'Complete Meditation', duration: '19 min', source: 'UCLA Mindful', type: 'Mindfulness',
+    url: 'https://d1cy5zxxhbcbkk.cloudfront.net/guided-meditations/03_Complete_Meditation_Instructions.mp3' },
+
+  // DoD Military Meditation Coach (public domain)
+  { id: 'dod-body-scan-quick', title: 'Quick Body Scan', duration: '3 min', source: 'DoD', type: 'Body Scan',
+    url: 'https://www.dvidshub.net/podcast/download/80871/DOD_109062444.mp3' },
+  { id: 'dod-body-scan-brief', title: 'Brief Body Scan', duration: '9 min', source: 'DoD', type: 'Body Scan',
+    url: 'https://www.dvidshub.net/podcast/download/80780/DOD_109059189.mp3' },
+  { id: 'dod-body-scan-14', title: 'Guided Body Scan', duration: '14 min', source: 'DoD', type: 'Body Scan',
+    url: 'https://www.dvidshub.net/podcast/download/80841/DOD_109062138.mp3' },
+  { id: 'dod-body-scan-17', title: 'Body Scan Practice', duration: '17 min', source: 'DoD', type: 'Body Scan',
+    url: 'https://www.dvidshub.net/podcast/download/80854/DOD_109062382.mp3' },
+  { id: 'dod-body-scan-extended', title: 'Extended Body Scan', duration: '28 min', source: 'DoD', type: 'Body Scan',
+    url: 'https://www.dvidshub.net/podcast/download/80785/DOD_109059359.mp3' },
+  { id: 'dod-pmr', title: 'Progressive Muscle Relaxation', duration: '13 min', source: 'DoD', type: 'Relaxation',
+    url: 'https://www.dvidshub.net/podcast/download/80840/DOD_109062143.mp3' },
+  { id: 'dod-walk-woods', title: 'A Walk in the Woods', duration: '18 min', source: 'DoD', type: 'Guided Imagery',
+    url: 'https://www.dvidshub.net/podcast/download/80805/DOD_109059616.mp3' },
+  { id: 'dod-mountain', title: 'Mountain Meditation', duration: '24 min', source: 'DoD', type: 'Guided Imagery',
+    url: 'https://www.dvidshub.net/podcast/download/80832/DOD_109062045.mp3' },
+
+  // VA WRIISC iRest Yoga Nidra
+  { id: 'va-body-scan', title: 'Body Scan', duration: '8 min', source: 'VA', type: 'Body Scan',
+    url: 'https://www.warrelatedillness.va.gov/WARRELATEDILLNESS/clinical/integrative-health/ca/media/2018-Body-Scan-TimAvery.mp3' },
+  { id: 'va-irest-intro', title: 'Introduction to iRest', duration: '8 min', source: 'VA', type: 'Yoga Nidra',
+    url: 'https://www.warrelatedillness.va.gov/WARRELATEDILLNESS/meditation/media/intro-to-iRest.mp3' },
+  { id: 'va-irest-body-sensing', title: 'iRest: Body Sensing', duration: '41 min', source: 'VA', type: 'Yoga Nidra',
+    url: 'https://www.warrelatedillness.va.gov/WARRELATEDILLNESS/meditation/media/session3-bodysensing.mp3' },
+];
+
+const audio = document.getElementById('audio');
+const playerEl = document.getElementById('player');
+const playerTitle = document.getElementById('playerTitle');
+const playBtn = document.getElementById('playBtn');
+const progressBar = document.getElementById('progressBar');
+const elapsedEl = document.getElementById('elapsed');
+const totalTimeEl = document.getElementById('totalTime');
+const playerClose = document.getElementById('playerClose');
+const sessionListEl = document.getElementById('sessionList');
+const cacheSizeEl = document.getElementById('cacheSize');
+const cacheClearBtn = document.getElementById('cacheClear');
+
+let currentSession = null;
+let seeking = false;
+
+function guidedFormatTime(sec) {
+  if (!isFinite(sec) || sec < 0) return '0:00';
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+// --- Session list rendering ---
+async function renderSessions() {
+  const cachedUrls = await getCachedUrls();
+  sessionListEl.innerHTML = '';
+  for (const s of SESSIONS) {
+    const item = document.createElement('div');
+    item.className = 'session-item' + (currentSession?.id === s.id ? ' playing' : '');
+    const isCached = cachedUrls.has(s.url);
+    item.innerHTML = `
+      <div class="session-info">
+        <div class="session-title">${s.title}</div>
+        <div class="session-meta">${s.source} · ${s.type}</div>
+      </div>
+      <div class="session-duration">${s.duration}</div>
+      ${isCached ? '<span class="session-cached" title="Available offline">\u2713</span>' : ''}`;
+    item.addEventListener('click', () => playSession(s));
+    sessionListEl.appendChild(item);
+  }
+}
+
+// --- Audio player ---
+function playSession(session) {
+  currentSession = session;
+  audio.src = session.url;
+  audio.play().catch(() => {});
+  playerEl.classList.add('active');
+  playerTitle.textContent = `${session.title} — ${session.source}`;
+  playBtn.innerHTML = '\u275A\u275A';
+  renderSessions();
+  updateMediaSession(session);
+  // Auto-cache for offline in the background
+  cacheIfNeeded(session.url);
+}
+
+async function cacheIfNeeded(url) {
+  try {
+    const cache = await caches.open(AUDIO_CACHE);
+    const existing = await cache.match(url);
+    if (existing) return;
+    const resp = await fetch(url);
+    if (resp.ok) await cache.put(url, resp);
+    renderSessions();
+    updateCacheSize();
+  } catch {}
+}
+
+playBtn.addEventListener('click', () => {
+  if (!audio.src) return;
+  if (audio.paused) { audio.play(); playBtn.innerHTML = '\u275A\u275A'; }
+  else { audio.pause(); playBtn.innerHTML = '\u25B6'; }
+});
+
+audio.addEventListener('timeupdate', () => {
+  if (seeking || !audio.duration) return;
+  progressBar.value = (audio.currentTime / audio.duration) * 1000;
+  elapsedEl.textContent = guidedFormatTime(audio.currentTime);
+  totalTimeEl.textContent = guidedFormatTime(audio.duration);
+});
+
+audio.addEventListener('ended', () => {
+  playBtn.innerHTML = '\u25B6';
+  progressBar.value = 1000;
+});
+
+audio.addEventListener('pause', () => { playBtn.innerHTML = '\u25B6'; });
+audio.addEventListener('play', () => { playBtn.innerHTML = '\u275A\u275A'; });
+
+progressBar.addEventListener('input', () => { seeking = true; });
+progressBar.addEventListener('change', () => {
+  if (audio.duration) audio.currentTime = (progressBar.value / 1000) * audio.duration;
+  seeking = false;
+});
+
+playerClose.addEventListener('click', () => {
+  audio.pause();
+  audio.src = '';
+  currentSession = null;
+  playerEl.classList.remove('active');
+  playBtn.innerHTML = '\u25B6';
+  progressBar.value = 0;
+  elapsedEl.textContent = '0:00';
+  totalTimeEl.textContent = '0:00';
+  renderSessions();
+  if ('mediaSession' in navigator) navigator.mediaSession.metadata = null;
+});
+
+// --- Media Session API (lock screen / background controls) ---
+function updateMediaSession(session) {
+  if (!('mediaSession' in navigator)) return;
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: session.title,
+    artist: session.source,
+    album: 'Guided Meditation',
+  });
+  navigator.mediaSession.setActionHandler('play', () => audio.play());
+  navigator.mediaSession.setActionHandler('pause', () => audio.pause());
+  navigator.mediaSession.setActionHandler('seekbackward', () => { audio.currentTime = Math.max(0, audio.currentTime - 15); });
+  navigator.mediaSession.setActionHandler('seekforward', () => { audio.currentTime = Math.min(audio.duration || 0, audio.currentTime + 15); });
+  navigator.mediaSession.setActionHandler('seekto', (d) => { if (d.seekTime != null) audio.currentTime = d.seekTime; });
+  navigator.mediaSession.setActionHandler('stop', () => { playerClose.click(); });
+}
+
+// --- Cache management ---
+async function getCachedUrls() {
+  try {
+    const cache = await caches.open(AUDIO_CACHE);
+    const keys = await cache.keys();
+    return new Set(keys.map(r => r.url));
+  } catch { return new Set(); }
+}
+
+async function clearCache() {
+  try { await caches.delete(AUDIO_CACHE); } catch {}
+  renderSessions();
+  updateCacheSize();
+}
+
+async function updateCacheSize() {
+  try {
+    if ('storage' in navigator && 'estimate' in navigator.storage) {
+      const est = await navigator.storage.estimate();
+      const mb = ((est.usage || 0) / (1024 * 1024)).toFixed(1);
+      cacheSizeEl.textContent = `Cached: ~${mb} MB`;
+    } else {
+      const cache = await caches.open(AUDIO_CACHE);
+      const keys = await cache.keys();
+      cacheSizeEl.textContent = `Cached: ${keys.length} session${keys.length !== 1 ? 's' : ''}`;
+    }
+  } catch { cacheSizeEl.textContent = 'Cached: 0 MB'; }
+}
+
+cacheClearBtn.addEventListener('click', clearCache);
+
+// --- Keyboard shortcuts for guided view ---
+document.addEventListener('keydown', (e) => {
+  if (!document.getElementById('guided-view').classList.contains('active')) return;
+  if (!audio.src || !currentSession) return;
+  if (e.key === ' ') {
+    e.preventDefault();
+    if (audio.paused) audio.play(); else audio.pause();
+  } else if (e.key === 'Escape') {
+    playerClose.click();
+  }
+});
+
+// --- Init guided view on first tab switch ---
+let guidedInitialized = false;
+document.querySelector('[data-tab="guided"]').addEventListener('click', () => {
+  if (!guidedInitialized) {
+    guidedInitialized = true;
+    renderSessions();
+    updateCacheSize();
+  }
+});
+
+// =============================================
+// Service worker
+// =============================================
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  });
+}
 </script>
 </body>
 </html>
