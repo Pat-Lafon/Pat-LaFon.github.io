@@ -227,6 +227,15 @@
     font-size: 0.85rem;
     flex-shrink: 0;
   }
+  .player-status {
+    font-size: 0.8rem;
+    opacity: 0.6;
+    margin-bottom: 8px;
+    min-height: 1.2em;
+  }
+  .player-status.error { color: #f87171; opacity: 1; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner { display: inline-block; animation: spin 1s linear infinite; }
 
   /* --- Audio player --- */
   .player {
@@ -405,6 +414,7 @@
         <div class="player-title" id="playerTitle"></div>
         <button class="player-close" id="playerClose" title="Close">&times;</button>
       </div>
+      <div class="player-status" id="playerStatus"></div>
       <div class="player-controls">
         <button class="play-btn" id="playBtn">&#9654;</button>
         <div class="progress-wrap">
@@ -777,6 +787,7 @@ const elapsedEl = document.getElementById('elapsed');
 const totalTimeEl = document.getElementById('totalTime');
 const playerClose = document.getElementById('playerClose');
 const sessionListEl = document.getElementById('sessionList');
+const playerStatus = document.getElementById('playerStatus');
 const cacheSizeEl = document.getElementById('cacheSize');
 const cacheClearBtn = document.getElementById('cacheClear');
 
@@ -817,6 +828,9 @@ function playSession(session) {
   audio.play().catch(() => {});
   playerEl.classList.add('active');
   playerTitle.textContent = `${session.title} — ${session.source}`;
+  playerStatus.textContent = '';
+  playerStatus.className = 'player-status';
+  playerStatus.innerHTML = '<span class="spinner">\u21BB</span> Loading\u2026';
   playBtn.innerHTML = '\u275A\u275A';
   renderSessions();
   updateMediaSession(session);
@@ -856,6 +870,13 @@ audio.addEventListener('ended', () => {
 
 audio.addEventListener('pause', () => { playBtn.innerHTML = '\u25B6'; });
 audio.addEventListener('play', () => { playBtn.innerHTML = '\u275A\u275A'; });
+audio.addEventListener('playing', () => { playerStatus.textContent = ''; });
+audio.addEventListener('waiting', () => { playerStatus.innerHTML = '<span class="spinner">\u21BB</span> Buffering\u2026'; playerStatus.className = 'player-status'; });
+audio.addEventListener('error', () => {
+  playerStatus.textContent = 'Failed to load audio. The source may be unavailable.';
+  playerStatus.className = 'player-status error';
+  playBtn.innerHTML = '\u25B6';
+});
 
 progressBar.addEventListener('input', () => { seeking = true; });
 progressBar.addEventListener('change', () => {
@@ -872,6 +893,8 @@ playerClose.addEventListener('click', () => {
   progressBar.value = 0;
   elapsedEl.textContent = '0:00';
   totalTimeEl.textContent = '0:00';
+  playerStatus.textContent = '';
+  playerStatus.className = 'player-status';
   renderSessions();
   if ('mediaSession' in navigator) navigator.mediaSession.metadata = null;
 });
