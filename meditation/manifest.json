@@ -1,7 +1,7 @@
 {
-  "name": "Box Breathing",
-  "short_name": "Breathe",
-  "description": "A calm, minimal box breathing guide — 4-4-4-4 rhythm with soft ambient sound",
+  "name": "Meditation",
+  "short_name": "Meditate",
+  "description": "Box breathing and guided meditation sessions with offline support",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
