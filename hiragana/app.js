@@ -540,10 +540,10 @@ function PracticeView({ current, input, setInput, revealed, feedback, handleSubm
                   How well did you know it?
                 </div>
                 <div class="grid grid-cols-4 gap-2">
-                  <${GradeButton} label="Again" sub="<1m" onClick=${() => grade(0)} color="#9c2a1f" />
-                  <${GradeButton} label="Hard"  sub="2d"  onClick=${() => grade(1)} color="#7a5a2e" />
-                  <${GradeButton} label="Good"  sub="3d"  onClick=${() => grade(2)} color="#3a5a3a" />
-                  <${GradeButton} label="Easy"  sub="5d+" onClick=${() => grade(3)} color="#2e4f6e" />
+                  <${GradeButton} label="Forgot"   sub="<1m" onClick=${() => grade(0)} color="#9c2a1f" />
+                  <${GradeButton} label="Slow"     sub="2d"  onClick=${() => grade(1)} color="#7a5a2e" />
+                  <${GradeButton} label="Recalled" sub="3d"  onClick=${() => grade(2)} color="#3a5a3a" />
+                  <${GradeButton} label="Instant"  sub="5d+" onClick=${() => grade(3)} color="#2e4f6e" />
                 </div>
               </div>`
         }
