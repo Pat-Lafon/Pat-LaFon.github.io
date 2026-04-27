@@ -12,12 +12,25 @@ const APP_ASSETS = [
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(APP_CACHE).then((cache) => cache.addAll(APP_ASSETS)).catch(() => {})
+    caches.open(APP_CACHE).then(async (cache) => {
+      await cache.addAll(APP_ASSETS);
+      // Remove stale entries no longer in the list
+      const valid = new Set(APP_ASSETS.map((a) => new URL(a, self.location).href));
+      const keys = await cache.keys();
+      await Promise.all(keys.filter((k) => !valid.has(k.url)).map((k) => cache.delete(k)));
+    }).catch(() => {})
   );
   self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
+  // Clean up any caches that aren't ours
+  const KEEP = [APP_CACHE, AUDIO_CACHE];
+  event.waitUntil(
+    caches.keys().then((names) =>
+      Promise.all(names.filter((n) => !KEEP.includes(n)).map((n) => caches.delete(n)))
+    )
+  );
   self.clients.claim();
 });
 

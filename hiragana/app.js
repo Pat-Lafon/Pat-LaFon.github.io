@@ -35,8 +35,22 @@ const ROWS = [
   { id: "py",     label: "Py-combo",          chars: [["ぴゃ","pya"],["ぴゅ","pyu"],["ぴょ","pyo"]] },
 ];
 
-const STORAGE_KEY = "hiragana-srs-v1";
-const STATS_KEY = "hiragana-stats-v1";
+const STORAGE_KEY = "hiragana-srs";
+const STATS_KEY = "hiragana-stats";
+
+// Migrate from old versioned keys (one-time cleanup)
+(function migrateKeys() {
+  try {
+    const legacyKeys = ["hiragana-srs-v1", "hiragana-stats-v1", "hiragana-stats-v2"];
+    for (const old of legacyKeys) {
+      const data = localStorage.getItem(old);
+      if (!data) continue;
+      const newKey = old.startsWith("hiragana-srs") ? STORAGE_KEY : STATS_KEY;
+      if (!localStorage.getItem(newKey)) localStorage.setItem(newKey, data);
+      localStorage.removeItem(old);
+    }
+  } catch (e) { /* skip */ }
+})();
 const DEFAULT_ENABLED = ["vowels", "k"];
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -44,12 +58,26 @@ function todayKey() {
   return new Date().toISOString().slice(0, 10);
 }
 
+// Stats format: { date, today: {reviewed, correct}, allTime: {reviewed, correct} }
+// Fixed size — never grows. Today rolls into allTime at midnight.
 function loadTodayStats() {
   try {
     const raw = localStorage.getItem(STATS_KEY);
     if (!raw) return null;
-    const all = JSON.parse(raw);
-    const s = all[todayKey()];
+    const data = JSON.parse(raw);
+    if (!data || typeof data !== "object") return null;
+    // If it's a new day, roll today into allTime and reset
+    if (data.date !== todayKey()) {
+      const allTime = data.allTime || { reviewed: 0, correct: 0 };
+      const prev = data.today || { reviewed: 0, correct: 0 };
+      allTime.reviewed += prev.reviewed;
+      allTime.correct += prev.correct;
+      data.date = todayKey();
+      data.today = { reviewed: 0, correct: 0 };
+      data.allTime = allTime;
+      localStorage.setItem(STATS_KEY, JSON.stringify(data));
+    }
+    const s = data.today;
     if (s && typeof s.reviewed === "number" && typeof s.correct === "number") return s;
     return null;
   } catch (e) { return null; }
@@ -58,10 +86,14 @@ function loadTodayStats() {
 function saveTodayStats(stats) {
   try {
     const raw = localStorage.getItem(STATS_KEY);
-    const all = raw ? JSON.parse(raw) : {};
-    all[todayKey()] = stats;
-    localStorage.setItem(STATS_KEY, JSON.stringify(all));
-  } catch (e) { /* skip */ }
+    const data = raw ? JSON.parse(raw) : {};
+    data.date = data.date || todayKey();
+    data.today = stats;
+    data.allTime = data.allTime || { reviewed: 0, correct: 0 };
+    localStorage.setItem(STATS_KEY, JSON.stringify(data));
+  } catch (e) {
+    console.warn("saveTodayStats failed:", e);
+  }
 }
 
 // ============================================================
@@ -89,6 +121,20 @@ function scheduleCard(card, quality) {
 
 // Alternate accepted romaji (pronunciation-based aliases for typing variants)
 const ALT_ROMAJI = { "ぢ": ["ji"], "づ": ["zu"], "ふ": ["hu"], "を": ["o"] };
+
+// Mnemonic images — shown on wrong answers for base hiragana
+const MNEMONICS = {
+  "あ": "a", "い": "i", "う": "u", "え": "e", "お": "o",
+  "か": "ka", "き": "ki", "く": "ku", "け": "ke", "こ": "ko",
+  "さ": "sa", "し": "shi", "す": "su", "せ": "se", "そ": "so",
+  "た": "ta", "ち": "chi", "つ": "tsu", "て": "te", "と": "to",
+  "な": "na", "に": "ni", "ぬ": "nu", "ね": "ne", "の": "no",
+  "は": "ha", "ひ": "hi", "ふ": "fu", "へ": "he", "ほ": "ho",
+  "ま": "ma", "み": "mi", "む": "mu", "め": "me", "も": "mo",
+  "や": "ya", "ゆ": "yu", "よ": "yo",
+  "ら": "ra", "り": "ri", "る": "ru", "れ": "re", "ろ": "ro",
+  "わ": "wa", "を": "wo", "ん": "n",
+};
 
 function makeFreshCard(kana, romaji, rowId) {
   return { kana, romaji, rowId, ease: 2.5, interval: 0, reps: 0, lapses: 0, due: Date.now(), lastReviewed: 0 };
@@ -129,14 +175,17 @@ function loadState() {
   }
 }
 
+// Max storage budget: 500KB. Actual usage is ~15KB.
+// Headroom for katakana, kanji, vocabulary.
+// If we exceed this, the data is corrupt — refuse to write garbage.
+const MAX_STORAGE_BYTES = 500 * 1024;
+
 function saveState(state) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    return true;
-  } catch (e) {
-    console.error("saveState failed:", e);
-    return false;
+  const json = JSON.stringify(state);
+  if (json.length > MAX_STORAGE_BYTES) {
+    throw new Error(`saveState: data exceeds ${MAX_STORAGE_BYTES} bytes (${json.length}). Data may be corrupt.`);
   }
+  localStorage.setItem(STORAGE_KEY, json);
 }
 
 // ============================================================
@@ -444,6 +493,16 @@ function PracticeView({ current, input, setInput, revealed, feedback, handleSubm
                 <div class="text-xs italic text-stone-500 mt-2">
                   you typed "${input}"
                 </div>
+                ${MNEMONICS[current.kana] && html`
+                  <img
+                    src=${`./mnemonics/${MNEMONICS[current.kana]}.png`}
+                    alt=${`Mnemonic for ${current.kana}`}
+                    loading="lazy"
+                    onError=${(e) => { e.target.style.display = 'none'; }}
+                    class="mt-3 rounded-lg shadow-sm"
+                    style=${{ maxWidth: "200px", maxHeight: "200px", margin: "12px auto 0" }}
+                  />
+                `}
               `}
             </div>
           `}
