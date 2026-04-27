@@ -223,18 +223,6 @@ export function App() {
     return () => clearInterval(t);
   }, []);
 
-  // Enter to continue from wrong-answer
-  useEffect(() => {
-    function onKey(e) {
-      if (e.key === "Enter" && revealed && feedback && !feedback.correct) {
-        e.preventDefault();
-        nextCard();
-      }
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [revealed, feedback]);
-
   // Load from localStorage on mount (synchronous, simple, reliable)
   useEffect(() => {
     const saved = loadState();
@@ -291,13 +279,6 @@ export function App() {
     return shuffle(top)[0];
   }
 
-  useEffect(() => {
-    if (loaded && !current) {
-      const next = pickNext();
-      if (next) setCurrent(next);
-    }
-  }, [loaded, cards, enabledRows]);
-
   function speak(kana) {
     try {
       if (!window.speechSynthesis) return;
@@ -348,6 +329,26 @@ export function App() {
     setCurrent(pickNext(cards));
     setTimeout(() => inputRef.current?.focus(), 0);
   }
+
+  // Pick initial card when loaded
+  useEffect(() => {
+    if (loaded && !current) {
+      const next = pickNext();
+      if (next) setCurrent(next);
+    }
+  }, [loaded, cards, enabledRows]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Enter to continue from wrong-answer
+  useEffect(() => {
+    function onKey(e) {
+      if (e.key === "Enter" && revealed && feedback && !feedback.correct) {
+        e.preventDefault();
+        nextCard();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [revealed, feedback]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function toggleRow(id) {
     setEnabledRows((rows) => rows.includes(id) ? rows.filter(r => r !== id) : [...rows, id]);
