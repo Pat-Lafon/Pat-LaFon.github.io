@@ -1,5 +1,5 @@
 // Service worker for offline support.
-// Network-first for app files (always get latest), cache-first for CDN assets.
+// Network-first for all same-origin files, pre-cached for offline.
 
 const CACHE = "hiragana-cache";
 const APP_ASSETS = [
@@ -7,7 +7,11 @@ const APP_ASSETS = [
   "./index.html",
   "./app.js",
   "./manifest.json",
-  // Mnemonic images (2.7MB total — pre-cached for offline)
+  // Vendored dependencies (~143KB total)
+  "./vendor/react.js",
+  "./vendor/react-dom.js",
+  "./vendor/htm.js",
+  // Mnemonic images (2.7MB total)
   "./mnemonics/a.png",
   "./mnemonics/chi.png",
   "./mnemonics/e.png",

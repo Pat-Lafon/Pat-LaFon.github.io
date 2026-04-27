@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import htm from "https://esm.sh/htm@3.1.1";
+import htm from "./vendor/htm.js";
 
 const html = htm.bind(React.createElement);
 
