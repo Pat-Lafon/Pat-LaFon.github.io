@@ -12,7 +12,8 @@
 		"debug": "cross-env DEBUG=Eleventy* npx @11ty/eleventy",
 		"debugstart": "cross-env DEBUG=Eleventy* npx @11ty/eleventy --serve --quiet",
 		"benchmark": "cross-env DEBUG=Eleventy:Benchmark* npx @11ty/eleventy",
-		"test": "node hiragana/storage-budget.test.js && node hiragana/cache-budget.test.js && node hiragana/vendor/check-updates.js"
+		"lint": "eslint hiragana/app.js hiragana/sw.js meditation/sw.js hiragana/*.test.js hiragana/vendor/update.js hiragana/vendor/check-updates.js",
+		"test": "npm run lint && node hiragana/storage-budget.test.js && node hiragana/cache-budget.test.js && node hiragana/vendor/check-updates.js"
 	},
 	"repository": {
 		"type": "git",
@@ -36,17 +37,21 @@
 	},
 	"homepage": "https://github.com/11ty/eleventy-base-blog#readme",
 	"devDependencies": {
-		"react": "18.3.1",
-		"react-dom": "18.3.1",
-		"htm": "3.1.1",
 		"@11ty/eleventy": "^3.0.0",
 		"@11ty/eleventy-img": "^6.0.4",
 		"@11ty/eleventy-navigation": "^1.0.5",
 		"@11ty/eleventy-plugin-rss": "^2.0.2",
 		"@11ty/eleventy-plugin-syntaxhighlight": "^5.0.2",
+		"@eslint/js": "^10.0.1",
 		"cross-env": "^7.0.3",
+		"eslint": "^10.2.1",
+		"eslint-plugin-react-hooks": "^7.1.1",
+		"globals": "^17.5.0",
+		"htm": "3.1.1",
 		"luxon": "^3.5.0",
 		"prismjs": "^1.29.0",
+		"react": "18.3.1",
+		"react-dom": "18.3.1",
 		"zod": "^4.3.6",
 		"zod-validation-error": "^5.0.0"
 	},
