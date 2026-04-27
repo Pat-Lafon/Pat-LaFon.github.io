@@ -12,7 +12,7 @@
 		"debug": "cross-env DEBUG=Eleventy* npx @11ty/eleventy",
 		"debugstart": "cross-env DEBUG=Eleventy* npx @11ty/eleventy --serve --quiet",
 		"benchmark": "cross-env DEBUG=Eleventy:Benchmark* npx @11ty/eleventy",
-		"test": "node hiragana/storage-budget.test.js"
+		"test": "node hiragana/storage-budget.test.js && node hiragana/cache-budget.test.js && node hiragana/vendor/check-updates.js"
 	},
 	"repository": {
 		"type": "git",
@@ -36,6 +36,9 @@
 	},
 	"homepage": "https://github.com/11ty/eleventy-base-blog#readme",
 	"devDependencies": {
+		"react": "18.3.1",
+		"react-dom": "18.3.1",
+		"htm": "3.1.1",
 		"@11ty/eleventy": "^3.0.0",
 		"@11ty/eleventy-img": "^6.0.4",
 		"@11ty/eleventy-navigation": "^1.0.5",
