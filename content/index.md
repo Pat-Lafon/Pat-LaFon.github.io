@@ -7,7 +7,7 @@ const eleventyNavigation = {
 
 # About
 
-<img src="../img/photo.jpeg" align="right" alt="drawing" width="50%"/>
+<img src="./photo.jpeg" align="right" alt="drawing" width="50%"/>
 
 I am a PhD student in CS at Purdue University, studying programming languages,
 formal methods, automated reasoning, program synthesis, and refinement types

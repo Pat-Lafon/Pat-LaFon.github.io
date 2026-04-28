@@ -82,7 +82,7 @@ export default async function(eleventyConfig) {
 
 		// widths: ["auto"],
 
-		failOnError: false,
+		failOnError: true,
 		htmlOptions: {
 			imgAttributes: {
 				// e.g. <img loading decoding> assigned on the HTML tag will override these values.
