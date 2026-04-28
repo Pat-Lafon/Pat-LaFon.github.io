@@ -23,6 +23,7 @@ export default async function(eleventyConfig) {
 		})
 		.addPassthroughCopy("./content/feed/pretty-atom-feed.xsl")
 		.addPassthroughCopy("./content/papers")
+		.addPassthroughCopy({ "./content/photo.jpeg": "/img/photo.jpeg" })
 		.addPassthroughCopy("./hiragana")
 		.addPassthroughCopy("./meditation");
 

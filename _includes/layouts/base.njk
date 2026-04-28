@@ -1,11 +1,30 @@
 <!doctype html>
 <html lang="{{ metadata.language }}">
+	{%- set pageTitle = title or metadata.title %}
+	{%- set pageDescription = description or metadata.description %}
+	{%- set pageImage = (image or metadata.image) | absoluteUrl(metadata.url) %}
+	{%- set pageUrl = page.url | absoluteUrl(metadata.url) %}
+	{%- set pageType = "article" if (tags and "posts" in tags) else "website" %}
 	<head>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<title>{{ title or metadata.title }}</title>
-		<meta name="description" content="{{ description or metadata.description }}">
+		<title>{{ pageTitle }}</title>
+		<meta name="description" content="{{ pageDescription }}">
+		<meta name="author" content="{{ metadata.author.name }}">
+		<link rel="canonical" href="{{ pageUrl }}">
 		<link rel="alternate" href="/feed/feed.xml" type="application/atom+xml" title="{{ metadata.title }}">
+
+		<meta property="og:title" content="{{ pageTitle }}">
+		<meta property="og:description" content="{{ pageDescription }}">
+		<meta property="og:url" content="{{ pageUrl }}">
+		<meta property="og:type" content="{{ pageType }}">
+		<meta property="og:site_name" content="{{ metadata.title }}">
+		<meta property="og:image" content="{{ pageImage }}">
+
+		<meta name="twitter:card" content="summary_large_image">
+		<meta name="twitter:title" content="{{ pageTitle }}">
+		<meta name="twitter:description" content="{{ pageDescription }}">
+		<meta name="twitter:image" content="{{ pageImage }}">
 
 		{#- Uncomment this if you’d like folks to know that you used Eleventy to build your site!  #}
 		{#- <meta name="generator" content="{{ eleventy.generator }}"> #}
