@@ -13,11 +13,13 @@
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <style>
     html, body, #root { height: 100%; margin: 0; padding: 0; overscroll-behavior: none; }
-    body { -webkit-tap-highlight-color: transparent; }
+    html { background: radial-gradient(ellipse at top, #f5efe2 0%, #ebe2cf 60%, #ddd0b3 100%); }
+    body { -webkit-tap-highlight-color: transparent; font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', serif; }
+    .boot { display: flex; align-items: center; justify-content: center; height: 100%; color: #1c1917; font-size: min(48vh, 70vw); line-height: 1; }
   </style>
 </head>
 <body>
-  <div id="root"></div>
+  <div id="root"><div class="boot">ひ</div></div>
 
   <script type="importmap">
   {
