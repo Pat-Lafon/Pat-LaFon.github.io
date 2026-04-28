@@ -38,7 +38,7 @@ export default function(eleventyConfig) {
 	});
 
 	eleventyConfig.addFilter("sortAlphabetically", strings =>
-		(strings || []).sort((b, a) => b.localeCompare(a))
+		(strings || []).sort((a, b) => a.localeCompare(b))
 	);
 
 	eleventyConfig.addFilter("absoluteUrl", (path, base) => new URL(path, base).href);
