@@ -52,7 +52,12 @@ const STATS_KEY = "hiragana-stats";
   } catch (e) { /* skip */ }
 })();
 const DEFAULT_ENABLED = ["vowels", "k"];
-const DAY_MS = 24 * 60 * 60 * 1000;
+
+// Leitner box cadences: card in box B is due every BOX_CADENCE[B] reviews.
+// Box 5 is "mastered" — surfaces only every 16 reviews.
+const BOX_CADENCE = [0, 1, 2, 4, 8, 16];
+const MAX_BOX = 5;
+const LEARNED_BOX = 3;
 
 function todayKey() {
   return new Date().toISOString().slice(0, 10);
@@ -97,26 +102,26 @@ function saveTodayStats(stats) {
 }
 
 // ============================================================
-// SM-2-ish spaced repetition algorithm
+// Leitner spaced repetition: cards live in boxes 1..5.
+// Schedule is review-count based, not time-based, so sporadic
+// usage produces consistent drilling regardless of calendar gaps.
 // ============================================================
-function scheduleCard(card, quality) {
-  // quality: 0=again, 1=hard, 2=good, 3=easy
-  let { ease = 2.5, interval = 0, reps = 0, lapses = 0 } = card;
-  if (quality === 0) {
-    reps = 0;
-    interval = 0;
-    lapses += 1;
-    ease = Math.max(1.3, ease - 0.2);
-  } else {
-    if (quality === 1) ease = Math.max(1.3, ease - 0.15);
-    if (quality === 3) ease = ease + 0.15;
-    reps += 1;
-    if (reps === 1) interval = 1;
-    else if (reps === 2) interval = quality === 1 ? 2 : 3;
-    else interval = Math.round(interval * ease * (quality === 1 ? 0.8 : quality === 3 ? 1.3 : 1));
-  }
-  const due = interval === 0 ? Date.now() + 30 * 1000 : Date.now() + interval * DAY_MS;
-  return { ...card, ease, interval, reps, lapses, due, lastReviewed: Date.now() };
+function applyGrade(card, quality, reviewCount) {
+  // quality: 0=forgot, 1=slow, 2=recalled, 3=instant
+  let box = card.box;
+  if (quality === 0) box = 1;
+  else if (quality === 1) box = Math.max(1, box - 1);
+  else if (quality === 2) box = Math.min(MAX_BOX, box + 1);
+  else if (quality === 3) box = Math.min(MAX_BOX, box + 2);
+  return { ...card, box, lastReviewedAt: reviewCount };
+}
+
+function isCardDue(card, reviewCount) {
+  return (reviewCount - card.lastReviewedAt) >= BOX_CADENCE[card.box];
+}
+
+function nextDueAt(card) {
+  return card.lastReviewedAt + BOX_CADENCE[card.box];
 }
 
 // Alternate accepted romaji (pronunciation-based aliases for typing variants)
@@ -137,7 +142,16 @@ const MNEMONICS = {
 };
 
 function makeFreshCard(kana, romaji, rowId) {
-  return { kana, romaji, rowId, ease: 2.5, interval: 0, reps: 0, lapses: 0, due: Date.now(), lastReviewed: 0 };
+  return { kana, romaji, rowId, box: 1, lastReviewedAt: -1 };
+}
+
+// Convert legacy SM-2 cards (ease/interval/reps/lapses/due) to Leitner shape.
+// Maps reps to box so users keep some progress through the migration.
+function migrateLegacyCard(c) {
+  if (typeof c.box === "number") return c;
+  const reps = typeof c.reps === "number" ? c.reps : 0;
+  const box = Math.min(MAX_BOX, Math.max(1, reps + 1));
+  return { kana: c.kana, romaji: c.romaji, rowId: c.rowId, box, lastReviewedAt: -1 };
 }
 
 function shuffle(arr) {
@@ -154,8 +168,7 @@ function shuffle(arr) {
 // ============================================================
 function isValidCard(c) {
   return c && typeof c.kana === "string" && typeof c.romaji === "string"
-    && typeof c.ease === "number" && typeof c.interval === "number"
-    && typeof c.reps === "number" && typeof c.due === "number";
+    && typeof c.box === "number" && typeof c.lastReviewedAt === "number";
 }
 
 function loadState() {
@@ -165,7 +178,9 @@ function loadState() {
     const parsed = JSON.parse(raw);
     if (parsed.cards && typeof parsed.cards === "object") {
       for (const [k, v] of Object.entries(parsed.cards)) {
-        if (!isValidCard(v)) delete parsed.cards[k];
+        const migrated = migrateLegacyCard(v);
+        if (isValidCard(migrated)) parsed.cards[k] = migrated;
+        else delete parsed.cards[k];
       }
     }
     return parsed;
@@ -194,6 +209,7 @@ function saveState(state) {
 export function App() {
   const [enabledRows, setEnabledRows] = useState(DEFAULT_ENABLED);
   const [cards, setCards] = useState({});
+  const [reviewCount, setReviewCount] = useState(0);
   const [current, setCurrent] = useState(null);
   const [revealed, setRevealed] = useState(false);
   const [input, setInput] = useState("");
@@ -201,7 +217,6 @@ export function App() {
   const [stats, setStats] = useState(() => loadTodayStats() || { reviewed: 0, correct: 0 });
   const [showSettings, setShowSettings] = useState(false);
   const [loaded, setLoaded] = useState(false);
-  const [now, setNow] = useState(Date.now());
   const inputRef = useRef(null);
   const jaVoiceRef = useRef(null);
 
@@ -217,12 +232,6 @@ export function App() {
     return () => window.speechSynthesis?.removeEventListener("voiceschanged", findJaVoice);
   }, []);
 
-  // tick clock
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 5000);
-    return () => clearInterval(t);
-  }, []);
-
   // Load from localStorage on mount (synchronous, simple, reliable)
   useEffect(() => {
     const saved = loadState();
@@ -233,6 +242,9 @@ export function App() {
       if (saved.cards && typeof saved.cards === "object") {
         setCards(saved.cards);
       }
+      if (typeof saved.reviewCount === "number") {
+        setReviewCount(saved.reviewCount);
+      }
     }
     setLoaded(true);
   }, []);
@@ -240,8 +252,8 @@ export function App() {
   // Save on any change
   useEffect(() => {
     if (!loaded) return;
-    saveState({ enabledRows, cards });
-  }, [enabledRows, cards, loaded]);
+    saveState({ enabledRows, cards, reviewCount });
+  }, [enabledRows, cards, reviewCount, loaded]);
 
   // Save stats on change
   useEffect(() => {
@@ -268,15 +280,18 @@ export function App() {
     });
   }, [enabledRows, loaded]);
 
-  function pickNext(cardMap = cards, exclude = current?.kana) {
+  function pickNext(cardMap = cards, count = reviewCount, exclude = current?.kana) {
     const all = Object.values(cardMap).filter((c) => enabledRows.includes(c.rowId));
     const pool = all.length > 1 ? all.filter((c) => c.kana !== exclude) : all;
     if (pool.length === 0) return null;
-    const due = pool.filter((c) => c.due <= Date.now());
+    // Most-overdue first; among ties, lowest box (cards needing more attention); random within.
+    const due = pool.filter((c) => isCardDue(c, count));
     const candidates = due.length ? due : pool;
-    const sorted = [...candidates].sort((a, b) => a.due - b.due);
-    const top = sorted.slice(0, Math.max(3, Math.ceil(sorted.length * 0.3)));
-    return shuffle(top)[0];
+    const minDueAt = Math.min(...candidates.map(nextDueAt));
+    const mostOverdue = candidates.filter((c) => nextDueAt(c) === minDueAt);
+    const minBox = Math.min(...mostOverdue.map((c) => c.box));
+    const tier = mostOverdue.filter((c) => c.box === minBox);
+    return shuffle(tier)[0];
   }
 
   function speak(kana) {
@@ -303,19 +318,22 @@ export function App() {
     setStats((s) => ({ reviewed: s.reviewed + 1, correct: s.correct + (correct ? 1 : 0) }));
     speak(current.kana);
     if (!correct) {
-      const updated = scheduleCard(current, 0);
+      const updated = applyGrade(current, 0, reviewCount);
       setCards((prev) => ({ ...prev, [current.kana]: updated }));
+      setReviewCount((n) => n + 1);
     }
   }
 
   function grade(quality, card = current) {
     if (!card) return;
-    const updated = scheduleCard(card, quality);
+    const updated = applyGrade(card, quality, reviewCount);
+    const nextCount = reviewCount + 1;
     setCards((prev) => {
       const newCards = { ...prev, [card.kana]: updated };
-      setCurrent(pickNext(newCards));
+      setCurrent(pickNext(newCards, nextCount));
       return newCards;
     });
+    setReviewCount(nextCount);
     setRevealed(false);
     setFeedback(null);
     setInput("");
@@ -357,12 +375,13 @@ export function App() {
   function resetProgress() {
     if (!confirm("Reset all SRS progress? Your enabled rows will stay the same.")) return;
     setCards({});
+    setReviewCount(0);
     setCurrent(null);
   }
 
   const enabledCards = Object.values(cards).filter(c => enabledRows.includes(c.rowId));
-  const dueCount = enabledCards.filter(c => c.due <= now).length;
-  const learnedCount = enabledCards.filter(c => c.reps >= 2).length;
+  const dueCount = enabledCards.filter(c => isCardDue(c, reviewCount)).length;
+  const learnedCount = enabledCards.filter(c => c.box >= LEARNED_BOX).length;
   const accuracy = stats.reviewed ? Math.round((stats.correct / stats.reviewed) * 100) : null;
 
   return html`
@@ -396,7 +415,7 @@ export function App() {
                 toggleRow=${toggleRow}
                 cards=${cards}
                 onReset=${resetProgress}
-                now=${now}
+                reviewCount=${reviewCount}
               />
             </div>`
           : html`<${PracticeView}
@@ -540,10 +559,10 @@ function PracticeView({ current, input, setInput, revealed, feedback, handleSubm
                   How well did you know it?
                 </div>
                 <div class="grid grid-cols-4 gap-2">
-                  <${GradeButton} label="Forgot"   sub="<1m" onClick=${() => grade(0)} color="#9c2a1f" />
-                  <${GradeButton} label="Slow"     sub="2d"  onClick=${() => grade(1)} color="#7a5a2e" />
-                  <${GradeButton} label="Recalled" sub="3d"  onClick=${() => grade(2)} color="#3a5a3a" />
-                  <${GradeButton} label="Instant"  sub="5d+" onClick=${() => grade(3)} color="#2e4f6e" />
+                  <${GradeButton} label="Forgot"   sub="box 1" onClick=${() => grade(0)} color="#9c2a1f" />
+                  <${GradeButton} label="Slow"     sub="−1"    onClick=${() => grade(1)} color="#7a5a2e" />
+                  <${GradeButton} label="Recalled" sub="+1"    onClick=${() => grade(2)} color="#3a5a3a" />
+                  <${GradeButton} label="Instant"  sub="+2"    onClick=${() => grade(3)} color="#2e4f6e" />
                 </div>
               </div>`
         }
@@ -584,7 +603,7 @@ function SpeakerIcon() {
 // ============================================================
 // Settings view
 // ============================================================
-function SettingsView({ enabledRows, toggleRow, cards, onReset, now }) {
+function SettingsView({ enabledRows, toggleRow, cards, onReset, reviewCount }) {
   return html`
     <div>
       <div class="text-[10px] tracking-[0.3em] uppercase text-stone-500 mb-4">
@@ -594,8 +613,8 @@ function SettingsView({ enabledRows, toggleRow, cards, onReset, now }) {
         ${ROWS.map((row) => {
           const enabled = enabledRows.includes(row.id);
           const rowCards = row.chars.map(([k]) => cards[k]).filter(Boolean);
-          const learned = rowCards.filter(c => c.reps >= 2).length;
-          const due = rowCards.filter(c => c.due <= now).length;
+          const learned = rowCards.filter(c => c.box >= LEARNED_BOX).length;
+          const due = rowCards.filter(c => isCardDue(c, reviewCount)).length;
           return html`
             <button
               key=${row.id}
