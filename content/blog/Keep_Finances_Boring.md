@@ -1,12 +1,10 @@
 ---
-title: This is my fourth post
-description: This is a post on My Blog about touchpoints and circling wagons.
-date: 
-tags: second tag
+title: Keep Finances Boring
+description:
+date:
+tags: [finance]
 draft: true
 ---
-
-# Keep Finances Boring
 
 Occasionally I will talk with my friends about finances.
 
