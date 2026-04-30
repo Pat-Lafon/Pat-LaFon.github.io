@@ -7,6 +7,7 @@ const AUDIO_CACHE = "meditation-audio";
 const APP_ASSETS = [
   "./",
   "./index.html",
+  "./app.js",
   "./manifest.json",
 ];
 

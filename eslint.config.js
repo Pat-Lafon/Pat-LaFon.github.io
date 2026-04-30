@@ -21,6 +21,17 @@ export default [
     },
   },
   {
+    files: ["meditation/app.js"],
+    languageOptions: {
+      globals: { ...globals.browser },
+      sourceType: "script",
+    },
+    rules: {
+      "no-unused-vars": ["warn", { argsIgnorePattern: "^_", caughtErrorsIgnorePattern: "^_|^e$" }],
+      "no-empty": ["error", { allowEmptyCatch: true }],
+    },
+  },
+  {
     files: ["hiragana/sw.js", "meditation/sw.js"],
     languageOptions: {
       globals: { ...globals.serviceworker },
