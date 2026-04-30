@@ -12,7 +12,7 @@
 		"debug": "cross-env DEBUG=Eleventy* npx @11ty/eleventy",
 		"debugstart": "cross-env DEBUG=Eleventy* npx @11ty/eleventy --serve --quiet",
 		"benchmark": "cross-env DEBUG=Eleventy:Benchmark* npx @11ty/eleventy",
-		"lint": "eslint hiragana/app.js hiragana/sw.js meditation/app.js meditation/sw.js hiragana/*.test.js hiragana/vendor/update.js hiragana/vendor/check-updates.js",
+		"lint": "eslint .",
 		"test": "npm run lint && node hiragana/storage-budget.test.js && node hiragana/cache-budget.test.js && node hiragana/vendor/check-updates.js"
 	},
 	"repository": {

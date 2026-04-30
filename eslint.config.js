@@ -52,6 +52,22 @@ export default [
     },
   },
   {
+    files: [
+      "eleventy.config.js",
+      "eslint.config.js",
+      "_config/**/*.js",
+      "_data/**/*.js",
+      "content/**/*.11tydata.js",
+    ],
+    languageOptions: {
+      globals: { ...globals.node },
+      sourceType: "module",
+    },
+    rules: {
+      "no-unused-vars": ["warn", { argsIgnorePattern: "^_", caughtErrorsIgnorePattern: "^_|^e$" }],
+    },
+  },
+  {
     ignores: ["_site/", "node_modules/", "hiragana/vendor/react*.js", "hiragana/vendor/htm.js"],
   },
 ];
