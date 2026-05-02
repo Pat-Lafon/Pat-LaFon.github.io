@@ -36,7 +36,7 @@ jobs:
           key: ${{ runner.os }}-eleventy-fetch-cache
 
 
-      - run: npm install
+      - run: npm ci
       - run: npm test
       - run: npm run build-ghpages
 
