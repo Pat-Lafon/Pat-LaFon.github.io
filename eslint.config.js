@@ -42,7 +42,7 @@ export default [
     },
   },
   {
-    files: ["hiragana/**/*.test.js", "hiragana/vendor/*.js"],
+    files: ["hiragana/**/*.test.js", "hiragana/vendor/*.js", "hiragana/audio/build.js"],
     languageOptions: {
       globals: { ...globals.node },
       sourceType: "module",
