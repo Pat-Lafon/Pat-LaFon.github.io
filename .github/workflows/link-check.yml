@@ -22,11 +22,12 @@ jobs:
       - name: Check links
         uses: lycheeverse/lychee-action@v2
         with:
-          # --base resolves root-relative paths (`/about/`) against _site/
-          # --accept tolerates common bot-rejection codes from external sites
+          # --root-dir resolves root-relative paths (`/about/`) against _site/.
+          # Lychee requires an absolute path here, hence $GITHUB_WORKSPACE.
+          # --accept tolerates common bot-rejection codes from external sites.
           args: >-
             --no-progress
-            --base _site
+            --root-dir ${{ github.workspace }}/_site
             --accept '200..=299, 403, 429'
             _site
           fail: true
