@@ -45,7 +45,15 @@ for (const dep of DEPS) {
   const url = dep.url(version);
   process.stdout.write(`Downloading ${dep.file} (${dep.pkg}@${version})... `);
   try {
-    const code = await fetchBundle(url);
+    let code = await fetchBundle(url);
+    // esm.sh bundles sometimes leave external peer deps as absolute-path imports
+    // (e.g. `from "/react@18.3.1/es2022/react.mjs"`), which resolve against our
+    // own origin and 404. Rewrite those to bare specifiers so the importmap
+    // in index.html can resolve them to the local vendored file.
+    code = code.replace(/from\s*"\/([a-z@][^/"]*)\/[^"]+"/g, (_, pkg) => {
+      const bare = pkg.replace(/@[^/]+$/, "");
+      return `from "${bare}"`;
+    });
     const outPath = join(__dirname, dep.file);
     writeFileSync(outPath, `// Vendored from ${url}\n// Version: ${version}\n${code}`);
     const kb = (Buffer.byteLength(code) / 1024).toFixed(1);
