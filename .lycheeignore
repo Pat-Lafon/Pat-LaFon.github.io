@@ -1,0 +1,5 @@
+# URLs to skip during link checking. One regex per line.
+#
+# UChicago's PL Summit cert chain isn't trusted by GitHub Actions runners
+# (works fine in browsers). Real link, not a real failure.
+pl\.cs\.uchicago\.edu
