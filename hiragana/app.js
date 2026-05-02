@@ -40,19 +40,6 @@ const STATS_KEY = "hiragana-stats";
 
 const KANA_TO_ROMAJI = Object.fromEntries(ROWS.flatMap((r) => r.chars));
 
-// Migrate from old versioned keys (one-time cleanup)
-(function migrateKeys() {
-  try {
-    const legacyKeys = ["hiragana-srs-v1", "hiragana-stats-v1", "hiragana-stats-v2"];
-    for (const old of legacyKeys) {
-      const data = localStorage.getItem(old);
-      if (!data) continue;
-      const newKey = old.startsWith("hiragana-srs") ? STORAGE_KEY : STATS_KEY;
-      if (!localStorage.getItem(newKey)) localStorage.setItem(newKey, data);
-      localStorage.removeItem(old);
-    }
-  } catch (e) { /* skip */ }
-})();
 const DEFAULT_ENABLED = ["vowels", "k"];
 
 // Leitner box cadences: card in box B is due every BOX_CADENCE[B] reviews.
