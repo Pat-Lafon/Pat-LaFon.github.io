@@ -1,0 +1,539 @@
+{
+  "a": {
+    "kana": "あ",
+    "file": "a.m4a",
+    "source": "wikimedia",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/e/ed/Ja-A.oga"
+  },
+  "i": {
+    "kana": "い",
+    "file": "i.m4a",
+    "source": "tts-kyoko"
+  },
+  "u": {
+    "kana": "う",
+    "file": "u.m4a",
+    "source": "wikimedia",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/4/4c/Ja-U.oga"
+  },
+  "e": {
+    "kana": "え",
+    "file": "e.m4a",
+    "source": "wikimedia",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/8/86/Ja-E.oga"
+  },
+  "o": {
+    "kana": "お",
+    "file": "o.m4a",
+    "source": "wikimedia",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/2/21/Ja-O.oga"
+  },
+  "ka": {
+    "kana": "か",
+    "file": "ka.m4a",
+    "source": "wikimedia",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/e/ec/Ja-Ka.oga"
+  },
+  "ki": {
+    "kana": "き",
+    "file": "ki.m4a",
+    "source": "tts-kyoko"
+  },
+  "ku": {
+    "kana": "く",
+    "file": "ku.m4a",
+    "source": "tts-kyoko"
+  },
+  "ke": {
+    "kana": "け",
+    "file": "ke.m4a",
+    "source": "tts-kyoko"
+  },
+  "ko": {
+    "kana": "こ",
+    "file": "ko.m4a",
+    "source": "tts-kyoko"
+  },
+  "sa": {
+    "kana": "さ",
+    "file": "sa.m4a",
+    "source": "tts-kyoko"
+  },
+  "shi": {
+    "kana": "し",
+    "file": "shi.m4a",
+    "source": "wikimedia",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/1/16/Ja-Shi.oga"
+  },
+  "su": {
+    "kana": "す",
+    "file": "su.m4a",
+    "source": "tts-kyoko"
+  },
+  "se": {
+    "kana": "せ",
+    "file": "se.m4a",
+    "source": "tts-kyoko"
+  },
+  "so": {
+    "kana": "そ",
+    "file": "so.m4a",
+    "source": "wikimedia",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/7/73/Ja-So.oga"
+  },
+  "ta": {
+    "kana": "た",
+    "file": "ta.m4a",
+    "source": "tts-kyoko"
+  },
+  "chi": {
+    "kana": "ち",
+    "file": "chi.m4a",
+    "source": "wikimedia",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/c/cb/Ja-Chi.oga"
+  },
+  "tsu": {
+    "kana": "つ",
+    "file": "tsu.m4a",
+    "source": "wikimedia",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/c/ca/Ja-Tsu.oga"
+  },
+  "te": {
+    "kana": "て",
+    "file": "te.m4a",
+    "source": "tts-kyoko"
+  },
+  "to": {
+    "kana": "と",
+    "file": "to.m4a",
+    "source": "tts-kyoko"
+  },
+  "na": {
+    "kana": "な",
+    "file": "na.m4a",
+    "source": "tts-kyoko"
+  },
+  "ni": {
+    "kana": "に",
+    "file": "ni.m4a",
+    "source": "tts-kyoko"
+  },
+  "nu": {
+    "kana": "ぬ",
+    "file": "nu.m4a",
+    "source": "tts-kyoko"
+  },
+  "ne": {
+    "kana": "ね",
+    "file": "ne.m4a",
+    "source": "tts-kyoko"
+  },
+  "no": {
+    "kana": "の",
+    "file": "no.m4a",
+    "source": "tts-kyoko"
+  },
+  "ha": {
+    "kana": "は",
+    "file": "ha.m4a",
+    "source": "tts-kyoko"
+  },
+  "hi": {
+    "kana": "ひ",
+    "file": "hi.m4a",
+    "source": "wikimedia",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/0/04/Ja-Hi.oga"
+  },
+  "fu": {
+    "kana": "ふ",
+    "file": "fu.m4a",
+    "source": "wikimedia",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/1/14/Ja-Fu.oga"
+  },
+  "he": {
+    "kana": "へ",
+    "file": "he.m4a",
+    "source": "tts-kyoko"
+  },
+  "ho": {
+    "kana": "ほ",
+    "file": "ho.m4a",
+    "source": "tts-kyoko"
+  },
+  "ma": {
+    "kana": "ま",
+    "file": "ma.m4a",
+    "source": "tts-kyoko"
+  },
+  "mi": {
+    "kana": "み",
+    "file": "mi.m4a",
+    "source": "tts-kyoko"
+  },
+  "mu": {
+    "kana": "む",
+    "file": "mu.m4a",
+    "source": "tts-kyoko"
+  },
+  "me": {
+    "kana": "め",
+    "file": "me.m4a",
+    "source": "tts-kyoko"
+  },
+  "mo": {
+    "kana": "も",
+    "file": "mo.m4a",
+    "source": "tts-kyoko"
+  },
+  "ya": {
+    "kana": "や",
+    "file": "ya.m4a",
+    "source": "tts-kyoko"
+  },
+  "yu": {
+    "kana": "ゆ",
+    "file": "yu.m4a",
+    "source": "tts-kyoko"
+  },
+  "yo": {
+    "kana": "よ",
+    "file": "yo.m4a",
+    "source": "tts-kyoko"
+  },
+  "ra": {
+    "kana": "ら",
+    "file": "ra.m4a",
+    "source": "wikimedia",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/f/f0/Ja-Ra.oga"
+  },
+  "ri": {
+    "kana": "り",
+    "file": "ri.m4a",
+    "source": "wikimedia",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/3/37/Ja-Ri.oga"
+  },
+  "ru": {
+    "kana": "る",
+    "file": "ru.m4a",
+    "source": "wikimedia",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/e/eb/Ja-Ru.oga"
+  },
+  "re": {
+    "kana": "れ",
+    "file": "re.m4a",
+    "source": "wikimedia",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/1/1d/Ja-Re.oga"
+  },
+  "ro": {
+    "kana": "ろ",
+    "file": "ro.m4a",
+    "source": "wikimedia",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/a/af/Ja-Ro.oga"
+  },
+  "wa": {
+    "kana": "わ",
+    "file": "wa.m4a",
+    "source": "tts-kyoko"
+  },
+  "wo": {
+    "kana": "を",
+    "file": "wo.m4a",
+    "source": "tts-kyoko"
+  },
+  "n": {
+    "kana": "ん",
+    "file": "n.m4a",
+    "source": "tts-kyoko"
+  },
+  "ga": {
+    "kana": "が",
+    "file": "ga.m4a",
+    "source": "tts-kyoko"
+  },
+  "gi": {
+    "kana": "ぎ",
+    "file": "gi.m4a",
+    "source": "tts-kyoko"
+  },
+  "gu": {
+    "kana": "ぐ",
+    "file": "gu.m4a",
+    "source": "tts-kyoko"
+  },
+  "ge": {
+    "kana": "げ",
+    "file": "ge.m4a",
+    "source": "tts-kyoko"
+  },
+  "go": {
+    "kana": "ご",
+    "file": "go.m4a",
+    "source": "tts-kyoko"
+  },
+  "za": {
+    "kana": "ざ",
+    "file": "za.m4a",
+    "source": "tts-kyoko"
+  },
+  "ji": {
+    "kana": "じ",
+    "file": "ji.m4a",
+    "source": "tts-kyoko"
+  },
+  "zu": {
+    "kana": "ず",
+    "file": "zu.m4a",
+    "source": "tts-kyoko"
+  },
+  "ze": {
+    "kana": "ぜ",
+    "file": "ze.m4a",
+    "source": "tts-kyoko"
+  },
+  "zo": {
+    "kana": "ぞ",
+    "file": "zo.m4a",
+    "source": "tts-kyoko"
+  },
+  "da": {
+    "kana": "だ",
+    "file": "da.m4a",
+    "source": "tts-kyoko"
+  },
+  "di": {
+    "kana": "ぢ",
+    "file": "ji.m4a",
+    "alias": "ji"
+  },
+  "du": {
+    "kana": "づ",
+    "file": "zu.m4a",
+    "alias": "zu"
+  },
+  "de": {
+    "kana": "で",
+    "file": "de.m4a",
+    "source": "tts-kyoko"
+  },
+  "do": {
+    "kana": "ど",
+    "file": "do.m4a",
+    "source": "tts-kyoko"
+  },
+  "ba": {
+    "kana": "ば",
+    "file": "ba.m4a",
+    "source": "tts-kyoko"
+  },
+  "bi": {
+    "kana": "び",
+    "file": "bi.m4a",
+    "source": "tts-kyoko"
+  },
+  "bu": {
+    "kana": "ぶ",
+    "file": "bu.m4a",
+    "source": "tts-kyoko"
+  },
+  "be": {
+    "kana": "べ",
+    "file": "be.m4a",
+    "source": "tts-kyoko"
+  },
+  "bo": {
+    "kana": "ぼ",
+    "file": "bo.m4a",
+    "source": "tts-kyoko"
+  },
+  "pa": {
+    "kana": "ぱ",
+    "file": "pa.m4a",
+    "source": "tts-kyoko"
+  },
+  "pi": {
+    "kana": "ぴ",
+    "file": "pi.m4a",
+    "source": "tts-kyoko"
+  },
+  "pu": {
+    "kana": "ぷ",
+    "file": "pu.m4a",
+    "source": "tts-kyoko"
+  },
+  "pe": {
+    "kana": "ぺ",
+    "file": "pe.m4a",
+    "source": "tts-kyoko"
+  },
+  "po": {
+    "kana": "ぽ",
+    "file": "po.m4a",
+    "source": "tts-kyoko"
+  },
+  "kya": {
+    "kana": "きゃ",
+    "file": "kya.m4a",
+    "source": "tts-kyoko"
+  },
+  "kyu": {
+    "kana": "きゅ",
+    "file": "kyu.m4a",
+    "source": "tts-kyoko"
+  },
+  "kyo": {
+    "kana": "きょ",
+    "file": "kyo.m4a",
+    "source": "tts-kyoko"
+  },
+  "sha": {
+    "kana": "しゃ",
+    "file": "sha.m4a",
+    "source": "tts-kyoko"
+  },
+  "shu": {
+    "kana": "しゅ",
+    "file": "shu.m4a",
+    "source": "tts-kyoko"
+  },
+  "sho": {
+    "kana": "しょ",
+    "file": "sho.m4a",
+    "source": "tts-kyoko"
+  },
+  "cha": {
+    "kana": "ちゃ",
+    "file": "cha.m4a",
+    "source": "tts-kyoko"
+  },
+  "chu": {
+    "kana": "ちゅ",
+    "file": "chu.m4a",
+    "source": "tts-kyoko"
+  },
+  "cho": {
+    "kana": "ちょ",
+    "file": "cho.m4a",
+    "source": "tts-kyoko"
+  },
+  "nya": {
+    "kana": "にゃ",
+    "file": "nya.m4a",
+    "source": "tts-kyoko"
+  },
+  "nyu": {
+    "kana": "にゅ",
+    "file": "nyu.m4a",
+    "source": "tts-kyoko"
+  },
+  "nyo": {
+    "kana": "にょ",
+    "file": "nyo.m4a",
+    "source": "tts-kyoko"
+  },
+  "hya": {
+    "kana": "ひゃ",
+    "file": "hya.m4a",
+    "source": "tts-kyoko"
+  },
+  "hyu": {
+    "kana": "ひゅ",
+    "file": "hyu.m4a",
+    "source": "tts-kyoko"
+  },
+  "hyo": {
+    "kana": "ひょ",
+    "file": "hyo.m4a",
+    "source": "tts-kyoko"
+  },
+  "mya": {
+    "kana": "みゃ",
+    "file": "mya.m4a",
+    "source": "tts-kyoko"
+  },
+  "myu": {
+    "kana": "みゅ",
+    "file": "myu.m4a",
+    "source": "tts-kyoko"
+  },
+  "myo": {
+    "kana": "みょ",
+    "file": "myo.m4a",
+    "source": "tts-kyoko"
+  },
+  "rya": {
+    "kana": "りゃ",
+    "file": "rya.m4a",
+    "source": "tts-kyoko"
+  },
+  "ryu": {
+    "kana": "りゅ",
+    "file": "ryu.m4a",
+    "source": "wikimedia",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/c/ca/Ja-Ryu.oga"
+  },
+  "ryo": {
+    "kana": "りょ",
+    "file": "ryo.m4a",
+    "source": "tts-kyoko"
+  },
+  "gya": {
+    "kana": "ぎゃ",
+    "file": "gya.m4a",
+    "source": "tts-kyoko"
+  },
+  "gyu": {
+    "kana": "ぎゅ",
+    "file": "gyu.m4a",
+    "source": "tts-kyoko"
+  },
+  "gyo": {
+    "kana": "ぎょ",
+    "file": "gyo.m4a",
+    "source": "tts-kyoko"
+  },
+  "ja": {
+    "kana": "じゃ",
+    "file": "ja.m4a",
+    "source": "tts-kyoko"
+  },
+  "ju": {
+    "kana": "じゅ",
+    "file": "ju.m4a",
+    "source": "tts-kyoko"
+  },
+  "jo": {
+    "kana": "じょ",
+    "file": "jo.m4a",
+    "source": "tts-kyoko"
+  },
+  "bya": {
+    "kana": "びゃ",
+    "file": "bya.m4a",
+    "source": "tts-kyoko"
+  },
+  "byu": {
+    "kana": "びゅ",
+    "file": "byu.m4a",
+    "source": "tts-kyoko"
+  },
+  "byo": {
+    "kana": "びょ",
+    "file": "byo.m4a",
+    "source": "tts-kyoko"
+  },
+  "pya": {
+    "kana": "ぴゃ",
+    "file": "pya.m4a",
+    "source": "tts-kyoko"
+  },
+  "pyu": {
+    "kana": "ぴゅ",
+    "file": "pyu.m4a",
+    "source": "tts-kyoko"
+  },
+  "pyo": {
+    "kana": "ぴょ",
+    "file": "pyo.m4a",
+    "source": "tts-kyoko"
+  }
+}

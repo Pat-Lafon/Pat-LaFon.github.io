@@ -38,6 +38,8 @@ const ROWS = [
 const STORAGE_KEY = "hiragana-srs";
 const STATS_KEY = "hiragana-stats";
 
+const KANA_TO_ROMAJI = Object.fromEntries(ROWS.flatMap((r) => r.chars));
+
 // Migrate from old versioned keys (one-time cleanup)
 (function migrateKeys() {
   try {
@@ -295,6 +297,16 @@ export function App() {
   }
 
   function speak(kana) {
+    const romaji = KANA_TO_ROMAJI[kana];
+    if (romaji) {
+      const audio = new Audio(`./audio/${romaji}.m4a`);
+      audio.play().catch(() => speakViaTTS(kana));
+      return;
+    }
+    speakViaTTS(kana);
+  }
+
+  function speakViaTTS(kana) {
     try {
       if (!window.speechSynthesis) return;
       window.speechSynthesis.cancel();
