@@ -27,9 +27,9 @@ const vendorFiles = readdirSync(VENDOR_DIR)
 
 const SHIPPED = [
   join(REPO_ROOT, "hiragana", "app.js"),
-  join(REPO_ROOT, "hiragana", "sw.js"),
+  join(REPO_ROOT, "hiragana", "sw.src.js"),
   join(REPO_ROOT, "meditation", "app.js"),
-  join(REPO_ROOT, "meditation", "sw.js"),
+  join(REPO_ROOT, "meditation", "sw.src.js"),
   ...vendorFiles,
 ];
 

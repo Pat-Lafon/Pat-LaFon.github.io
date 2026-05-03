@@ -5,6 +5,7 @@ import pluginNavigation from "@11ty/eleventy-navigation";
 import { eleventyImageTransformPlugin } from "@11ty/eleventy-img";
 
 import pluginFilters from "./_config/filters.js";
+import { buildServiceWorkers } from "./_config/build-sw.js";
 
 /** @param {import("@11ty/eleventy").UserConfig} eleventyConfig */
 export default async function(eleventyConfig) {
@@ -108,6 +109,12 @@ export default async function(eleventyConfig) {
 
 	eleventyConfig.addShortcode("currentBuildDate", () => {
 		return (new Date()).toISOString();
+	});
+
+	// Compile the PWA service workers from sw.src.js + auto-generated precache manifest
+	// after every build. See _config/build-sw.js.
+	eleventyConfig.on("eleventy.after", async () => {
+		await buildServiceWorkers();
 	});
 
 	// Features to make your build faster (when you need them)

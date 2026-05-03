@@ -32,7 +32,7 @@ export default [
     },
   },
   {
-    files: ["hiragana/sw.js", "meditation/sw.js"],
+    files: ["_config/sw/hiragana.js", "_config/sw/meditation.js"],
     languageOptions: {
       globals: { ...globals.serviceworker },
       sourceType: "module",

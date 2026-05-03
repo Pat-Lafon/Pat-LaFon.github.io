@@ -13,7 +13,7 @@
 		"debugstart": "cross-env DEBUG=Eleventy* npx @11ty/eleventy --serve --quiet",
 		"benchmark": "cross-env DEBUG=Eleventy:Benchmark* npx @11ty/eleventy",
 		"lint": "eslint .",
-		"test": "npm run lint && node hiragana/storage-budget.test.js && node hiragana/cache-budget.test.js && node hiragana/vendor/check-updates.js && node hiragana/vendor/import-scan.test.js && node hiragana/drift-scan.test.js"
+		"test": "npm run lint && node hiragana/storage-budget.test.js && node hiragana/vendor/check-updates.js && node hiragana/vendor/import-scan.test.js && npm run build"
 	},
 	"repository": {
 		"type": "git",
@@ -44,6 +44,7 @@
 		"@11ty/eleventy-plugin-syntaxhighlight": "^5.0.2",
 		"@eslint/js": "^10.0.1",
 		"cross-env": "^10.1.0",
+		"esbuild": "^0.24.2",
 		"eslint": "^10.2.1",
 		"eslint-plugin-react-hooks": "^7.1.1",
 		"globals": "^17.5.0",
@@ -52,6 +53,12 @@
 		"prismjs": "^1.29.0",
 		"react": "18.3.1",
 		"react-dom": "18.3.1",
+		"workbox-build": "^7.3.0",
+		"workbox-core": "^7.3.0",
+		"workbox-expiration": "^7.3.0",
+		"workbox-precaching": "^7.3.0",
+		"workbox-routing": "^7.3.0",
+		"workbox-strategies": "^7.3.0",
 		"zod": "^4.3.6",
 		"zod-validation-error": "^5.0.0"
 	},
