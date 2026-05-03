@@ -325,13 +325,9 @@ const SESSIONS = [
   { id: 'dod-mountain', title: 'Mountain Meditation', duration: '24 min', source: 'DoD', type: 'Guided Imagery',
     url: 'https://www.dvidshub.net/podcast/download/80832/DOD_109062045.mp3' },
 
-  // VA WRIISC iRest Yoga Nidra
+  // VA WRIISC
   { id: 'va-body-scan', title: 'Body Scan', duration: '8 min', source: 'VA', type: 'Body Scan',
     url: 'https://www.warrelatedillness.va.gov/WARRELATEDILLNESS/clinical/integrative-health/ca/media/2018-Body-Scan-TimAvery.mp3' },
-  { id: 'va-irest-intro', title: 'Introduction to iRest', duration: '8 min', source: 'VA', type: 'Yoga Nidra',
-    url: 'https://www.warrelatedillness.va.gov/WARRELATEDILLNESS/meditation/media/intro-to-iRest.mp3' },
-  { id: 'va-irest-body-sensing', title: 'iRest: Body Sensing', duration: '41 min', source: 'VA', type: 'Yoga Nidra',
-    url: 'https://www.warrelatedillness.va.gov/WARRELATEDILLNESS/meditation/media/session3-bodysensing.mp3' },
 ];
 
 const audio = document.getElementById('audio');
