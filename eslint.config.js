@@ -68,6 +68,6 @@ export default [
     },
   },
   {
-    ignores: ["_site/", "node_modules/", "hiragana/vendor/react*.js", "hiragana/vendor/htm.js"],
+    ignores: ["_site/", "node_modules/", "hiragana/vendor/react*.js", "hiragana/vendor/scheduler.js", "hiragana/vendor/htm.js"],
   },
 ];
