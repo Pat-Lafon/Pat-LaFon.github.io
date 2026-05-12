@@ -92,7 +92,7 @@ function hiraganaExpectedUrls() {
   }
   for (const m of html.matchAll(/<link[^>]+href=["']([^"']+)["'][^>]*>/gi)) {
     const tag = m[0];
-    if (/rel=["'](manifest|icon|apple-touch-icon)["']/i.test(tag) && !/^(https?|data):/.test(m[1])) {
+    if (/rel=["'](manifest|icon|apple-touch-icon|stylesheet)["']/i.test(tag) && !/^(https?|data):/.test(m[1])) {
       urls.add(stripLeadingDotSlash(m[1]));
     }
   }
@@ -107,7 +107,7 @@ function meditationExpectedShellUrls() {
   }
   for (const m of html.matchAll(/<link[^>]+href=["']([^"']+)["'][^>]*>/gi)) {
     const tag = m[0];
-    if (/rel=["'](manifest|icon|apple-touch-icon)["']/i.test(tag) && !/^(https?|data):/.test(m[1])) {
+    if (/rel=["'](manifest|icon|apple-touch-icon|stylesheet)["']/i.test(tag) && !/^(https?|data):/.test(m[1])) {
       urls.add(stripLeadingDotSlash(m[1]));
     }
   }

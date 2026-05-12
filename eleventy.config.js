@@ -6,6 +6,7 @@ import { eleventyImageTransformPlugin } from "@11ty/eleventy-img";
 
 import pluginFilters from "./_config/filters.js";
 import { buildServiceWorkers } from "./_config/build-sw.js";
+import { buildTailwind } from "./_config/build-tailwind.js";
 
 // Path suffixes inside the PWA dirs that are build-time/CI-only and must not ship to _site.
 const PWA_BUILD_ONLY = [
@@ -123,9 +124,11 @@ export default async function(eleventyConfig) {
 		return (new Date()).toISOString();
 	});
 
-	// Compile the PWA service workers from sw.src.js + auto-generated precache manifest
-	// after every build. See _config/build-sw.js.
+	// After Eleventy writes _site/: build the hiragana Tailwind bundle, then the
+	// PWA service workers (so the generated CSS is included in each precache
+	// manifest). See _config/build-tailwind.js, _config/build-sw.js.
 	eleventyConfig.on("eleventy.after", async () => {
+		await buildTailwind();
 		await buildServiceWorkers();
 	});
 
