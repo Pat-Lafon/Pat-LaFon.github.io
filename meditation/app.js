@@ -393,19 +393,9 @@ function playSession(session) {
   playBtn.innerHTML = '\u275A\u275A';
   renderSessions();
   updateMediaSession(session);
-  // Auto-cache for offline in the background
-  cacheIfNeeded(session.url);
-}
-
-async function cacheIfNeeded(url) {
-  const cache = await caches.open(AUDIO_CACHE);
-  const existing = await cache.match(url);
-  if (existing) return;
-  const resp = await fetch(url);
-  if (!resp.ok) throw new Error(`cacheIfNeeded: fetch ${url} returned ${resp.status}`);
-  await cache.put(url, resp);
-  renderSessions();
-  updateCacheSize();
+  // The SW's CacheFirst route caches the audio on first <audio src> fetch.
+  // We re-render on `canplaythrough` (below) so the offline checkmark appears
+  // once the cache write has likely landed.
 }
 
 playBtn.addEventListener('click', () => {
@@ -430,6 +420,7 @@ audio.addEventListener('pause', () => { playBtn.innerHTML = '\u25B6'; });
 audio.addEventListener('play', () => { playBtn.innerHTML = '\u275A\u275A'; });
 audio.addEventListener('playing', () => { playerStatus.textContent = ''; });
 audio.addEventListener('waiting', () => { playerStatus.innerHTML = '<span class="spinner">\u21BB</span> Buffering\u2026'; playerStatus.className = 'player-status'; });
+audio.addEventListener('canplaythrough', () => { renderSessions(); updateCacheSize(); });
 audio.addEventListener('error', () => {
   playerStatus.textContent = 'Failed to load audio. The source may be unavailable.';
   playerStatus.className = 'player-status error';
