@@ -1,10 +1,13 @@
 // One-time audio asset builder.
-// For each of the 104 hiragana syllables, prefer a CC-licensed Wikimedia
-// Commons clip; fall back to macOS `say -v Kyoko` for syllables Commons
-// doesn't cover. Outputs <romaji>.m4a + sources.json + credits.md.
+// For each of the 104 hiragana syllables, prefer in order:
+//   1. Wikimedia Commons (CC-licensed, ~17 clips)
+//   2. Tae Kim's basic_sounds.zip (CC BY-NC-SA 3.0 US, ~30 base gojūon clips
+//      not already on Commons)
+//   3. macOS `say -v Kyoko` for everything else (dakuten/handakuten/yōon).
+// Outputs <romaji>.m4a + sources.json + credits.md.
 //
 // Run: node hiragana/audio/build.js
-// Prereqs: macOS (for `say`), `afinfo`, and ffmpeg in PATH.
+// Prereqs: macOS (for `say`), `afinfo`, `unzip`, and ffmpeg in PATH.
 
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -95,6 +98,34 @@ async function downloadAndConvert(url, outPath) {
   await unlink(tmpOga);
 }
 
+// Tae Kim's basic_sounds.zip — base gojūon row, single voice, slow enunciation.
+// Downloaded once into TMP_DIR/tae-kim/ and reused for every clip lookup.
+const TAE_KIM_URL = "http://www.guidetojapanese.org/audio/basic_sounds.zip";
+const TAE_KIM_LICENSE = "CC BY-NC-SA 3.0 US";
+const TAE_KIM_DIR = join(TMP_DIR, "tae-kim");
+let taeKimReady = false;
+
+async function ensureTaeKim() {
+  if (taeKimReady) return;
+  const zipPath = join(TMP_DIR, "basic_sounds.zip");
+  if (!existsSync(join(TAE_KIM_DIR, "basic_sounds", "a.mp3"))) {
+    const res = await fetchWithRetry(TAE_KIM_URL);
+    if (!res.ok) throw new Error(`Tae Kim download failed: ${res.status}`);
+    await writeFile(zipPath, Buffer.from(await res.arrayBuffer()));
+    await mkdir(TAE_KIM_DIR, { recursive: true });
+    await exec("unzip", ["-o", "-q", zipPath, "-d", TAE_KIM_DIR]);
+  }
+  taeKimReady = true;
+}
+
+function taeKimPath(romaji) {
+  return join(TAE_KIM_DIR, "basic_sounds", `${romaji}.mp3`);
+}
+
+async function convertTaeKim(romaji, outPath) {
+  await exec("ffmpeg", ["-y", "-loglevel", "error", "-i", taeKimPath(romaji), "-codec:a", "aac", "-b:a", "64k", outPath]);
+}
+
 async function ttsGenerate(kana, romaji, outPath) {
   const tmpAiff = join(TMP_DIR, `${romaji}.aiff`);
   // Single vowels and ん clip too short in isolation. Pad with chōonpu;
@@ -110,9 +141,11 @@ async function ttsGenerate(kana, romaji, outPath) {
 
 async function main() {
   if (!existsSync(TMP_DIR)) await mkdir(TMP_DIR, { recursive: true });
+  await ensureTaeKim();
 
   const sources = {};
   const credits = [];
+  let taeKimUsed = 0;
 
   console.log(`Building audio for ${SYLLABLES.length} syllables...\n`);
 
@@ -138,6 +171,16 @@ async function main() {
       sources[romaji] = { kana, file: outFile, source: "wikimedia", url: wikimedia.url };
       credits.push({ romaji, kana, user: wikimedia.user, license: wikimedia.license, url: wikimedia.url });
       console.log(`  WIKI   ${romaji.padEnd(4)} ← ${filename} (${wikimedia.user}, ${wikimedia.license})`);
+      continue;
+    }
+
+    // Try Tae Kim's basic_sounds (base gojūon only)
+    if (existsSync(taeKimPath(romaji))) {
+      await convertTaeKim(romaji, outPath);
+      sources[romaji] = { kana, file: outFile, source: "tae-kim" };
+      taeKimUsed++;
+      console.log(`  TAEKIM ${romaji.padEnd(4)} ← basic_sounds/${romaji}.mp3`);
+      await sleep(250);
       continue;
     }
 
@@ -175,6 +218,9 @@ async function main() {
     lines.push("");
   }
   const ttsCount = Object.values(sources).filter(s => s.source === "tts-kyoko").length;
+  if (taeKimUsed) {
+    lines.push(`\n${taeKimUsed} clips sourced from Tae Kim's [Guide to Japanese](https://www.guidetojapanese.org/) \`basic_sounds.zip\` under ${TAE_KIM_LICENSE}.`);
+  }
   if (ttsCount) lines.push(`\n${ttsCount} clips generated locally with macOS \`say -v Kyoko\` (no attribution required).`);
   await writeFile(join(OUT_DIR, "credits.md"), lines.join("\n") + "\n");
 
@@ -183,7 +229,7 @@ async function main() {
 
   const wikiCount = credits.length;
   const aliasCount = Object.keys(ROMAJI_ALIAS).length;
-  console.log(`\nDone. ${wikiCount} Wikimedia, ${ttsCount} TTS, ${aliasCount} aliases.`);
+  console.log(`\nDone. ${wikiCount} Wikimedia, ${taeKimUsed} Tae Kim, ${ttsCount} TTS, ${aliasCount} aliases.`);
   console.log(`Wrote ${SYLLABLES.length} entries to sources.json, ${wikiCount} credits to credits.md.`);
 }
 
