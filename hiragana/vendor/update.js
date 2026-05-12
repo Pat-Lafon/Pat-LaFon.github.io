@@ -6,17 +6,10 @@
 import { writeFileSync, readFileSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
+import { DEPS } from "./deps.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const pkg = JSON.parse(readFileSync(join(__dirname, "../../package.json"), "utf-8"));
-
-// Map npm package names to vendor filenames and esm.sh URL patterns
-const DEPS = [
-  { pkg: "react",     file: "react.js",      url: (v) => `https://esm.sh/react@${v}?bundle` },
-  { pkg: "react-dom", file: "react-dom.js",  url: (v) => `https://esm.sh/react-dom@${v}/client?bundle` },
-  { pkg: "scheduler", file: "scheduler.js",  url: (v) => `https://esm.sh/scheduler@${v}?bundle` },
-  { pkg: "htm",       file: "htm.js",        url: (v) => `https://esm.sh/htm@${v}?bundle` },
-];
 
 const ESM_SH = "https://esm.sh";
 

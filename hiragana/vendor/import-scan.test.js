@@ -44,6 +44,7 @@ const SW_SOURCES = [
 const VENDOR_NODE_ONLY = new Set([
   "update.js",
   "check-updates.js",
+  "deps.js",
   "import-scan.test.js",
 ]);
 

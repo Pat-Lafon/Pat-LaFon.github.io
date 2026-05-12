@@ -6,6 +6,7 @@
 import { readFileSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
+import { DEPS } from "./deps.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const pkg = JSON.parse(readFileSync(join(__dirname, "../../package.json"), "utf-8"));
@@ -18,13 +19,11 @@ try {
   process.exit(1);
 }
 
-const PACKAGES = { "react.js": "react", "react-dom.js": "react-dom", "htm.js": "htm" };
-
 let outOfSync = 0;
 
-for (const [filename, npmPkg] of Object.entries(PACKAGES)) {
+for (const { file, pkg: npmPkg } of DEPS) {
   const pkgVersion = pkg.devDependencies[npmPkg];
-  const vendoredVersion = versions[filename];
+  const vendoredVersion = versions[file];
 
   if (!pkgVersion) {
     console.error(`FAIL: ${npmPkg} not in package.json devDependencies`);
