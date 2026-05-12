@@ -1,7 +1,8 @@
 {
-	"name": "eleventy-base-blog",
-	"version": "9.0.0",
-	"description": "A starter repository for a blog web site using the Eleventy site generator.",
+	"name": "pat-lafon-github-io",
+	"version": "1.0.0",
+	"description": "Personal website and blog for Patrick LaFontaine, plus standalone hiragana and meditation PWAs.",
+	"private": true,
 	"type": "module",
 	"scripts": {
 		"build": "npx @11ty/eleventy",
@@ -17,25 +18,20 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "git://github.com/11ty/eleventy-base-blog.git"
+		"url": "git+https://github.com/Pat-Lafon/Pat-LaFon.github.io.git"
 	},
 	"author": {
-		"name": "Zach Leatherman",
-		"email": "zachleatherman@gmail.com",
-		"url": "https://zachleat.com/"
+		"name": "Patrick LaFontaine",
+		"url": "https://pat-lafon.github.io/"
 	},
 	"license": "MIT",
 	"engines": {
 		"node": ">=18"
 	},
-	"funding": {
-		"type": "opencollective",
-		"url": "https://opencollective.com/11ty"
-	},
 	"bugs": {
-		"url": "https://github.com/11ty/eleventy-base-blog/issues"
+		"url": "https://github.com/Pat-Lafon/Pat-LaFon.github.io/issues"
 	},
-	"homepage": "https://github.com/11ty/eleventy-base-blog#readme",
+	"homepage": "https://pat-lafon.github.io/",
 	"devDependencies": {
 		"@11ty/eleventy": "^3.1.5",
 		"@11ty/eleventy-img": "^6.0.4",
