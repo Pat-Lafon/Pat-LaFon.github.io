@@ -377,7 +377,12 @@ let currentSession = null;
 let seeking = false;
 
 function spinner(label) {
-  return `<span class="spinner">↻</span> ${label}…`;
+  const frag = document.createDocumentFragment();
+  const span = document.createElement('span');
+  span.className = 'spinner';
+  span.textContent = '↻';
+  frag.append(span, ` ${label}…`);
+  return frag;
 }
 
 function setPlayIcon(playing) {
@@ -420,7 +425,7 @@ function playSession(session) {
   });
   playerEl.classList.add('active');
   playerTitle.textContent = `${session.title} — ${session.source}`;
-  playerStatus.innerHTML = spinner('Loading');
+  playerStatus.replaceChildren(spinner('Loading'));
   renderSessions();
   updateMediaSession(session);
   // The SW's CacheFirst route caches the audio on first <audio src> fetch.
@@ -447,7 +452,7 @@ audio.addEventListener('ended', () => { progressBar.value = 1000; });
 audio.addEventListener('pause', () => setPlayIcon(false));
 audio.addEventListener('play', () => setPlayIcon(true));
 audio.addEventListener('playing', () => { playerStatus.textContent = ''; });
-audio.addEventListener('waiting', () => { playerStatus.innerHTML = spinner('Buffering'); playerStatus.className = 'player-status'; });
+audio.addEventListener('waiting', () => { playerStatus.replaceChildren(spinner('Buffering')); playerStatus.className = 'player-status'; });
 audio.addEventListener('canplaythrough', () => { renderSessions(); updateCacheSize(); });
 audio.addEventListener('error', () => {
   playerStatus.textContent = 'Failed to load audio. The source may be unavailable.';
@@ -475,6 +480,15 @@ playerClose.addEventListener('click', () => {
 });
 
 // --- Media Session API (lock screen / background controls) ---
+if ('mediaSession' in navigator) {
+  navigator.mediaSession.setActionHandler('play', () => audio.play());
+  navigator.mediaSession.setActionHandler('pause', () => audio.pause());
+  navigator.mediaSession.setActionHandler('seekbackward', () => { audio.currentTime = Math.max(0, audio.currentTime - 15); });
+  navigator.mediaSession.setActionHandler('seekforward', () => { audio.currentTime = Math.min(audio.duration || 0, audio.currentTime + 15); });
+  navigator.mediaSession.setActionHandler('seekto', (d) => { audio.currentTime = d.seekTime; });
+  navigator.mediaSession.setActionHandler('stop', () => { playerClose.click(); });
+}
+
 function updateMediaSession(session) {
   if (!('mediaSession' in navigator)) return;
   navigator.mediaSession.metadata = new MediaMetadata({
@@ -482,12 +496,6 @@ function updateMediaSession(session) {
     artist: session.source,
     album: 'Guided Meditation',
   });
-  navigator.mediaSession.setActionHandler('play', () => audio.play());
-  navigator.mediaSession.setActionHandler('pause', () => audio.pause());
-  navigator.mediaSession.setActionHandler('seekbackward', () => { audio.currentTime = Math.max(0, audio.currentTime - 15); });
-  navigator.mediaSession.setActionHandler('seekforward', () => { audio.currentTime = Math.min(audio.duration || 0, audio.currentTime + 15); });
-  navigator.mediaSession.setActionHandler('seekto', (d) => { audio.currentTime = d.seekTime; });
-  navigator.mediaSession.setActionHandler('stop', () => { playerClose.click(); });
 }
 
 // --- Cache management ---
