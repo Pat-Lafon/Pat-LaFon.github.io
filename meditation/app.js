@@ -501,15 +501,13 @@ async function clearCache() {
 }
 
 async function updateCacheSize() {
-  if ('storage' in navigator && 'estimate' in navigator.storage) {
-    const est = await navigator.storage.estimate();
-    const mb = ((est.usage || 0) / (1024 * 1024)).toFixed(1);
-    cacheSizeEl.textContent = `Cached: ~${mb} MB`;
-  } else {
-    const cache = await caches.open(AUDIO_CACHE);
-    const keys = await cache.keys();
-    cacheSizeEl.textContent = `Cached: ${keys.length} session${keys.length !== 1 ? 's' : ''}`;
-  }
+  // Count, not bytes: the cached audio is cross-origin opaque, and
+  // `response.blob().size` returns 0 for opaque responses to prevent CORS
+  // info leakage. `navigator.storage.estimate()` reports total origin storage
+  // (precache + everything), which misleads on a fresh install.
+  const cache = await caches.open(AUDIO_CACHE);
+  const keys = await cache.keys();
+  cacheSizeEl.textContent = `Cached: ${keys.length} session${keys.length !== 1 ? 's' : ''}`;
 }
 
 cacheClearBtn.addEventListener('click', clearCache);
