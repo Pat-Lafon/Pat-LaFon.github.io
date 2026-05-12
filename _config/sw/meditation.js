@@ -9,7 +9,7 @@ import { ExpirationPlugin } from "workbox-expiration";
 import { CacheableResponsePlugin } from "workbox-cacheable-response";
 
 self.skipWaiting();
-self.clients.claim?.();
+self.clients.claim();
 cleanupOutdatedCaches();
 
 precacheAndRoute(self.__WB_MANIFEST);

@@ -124,15 +124,11 @@ function stripLeadingDotSlash(p) {
 
 function inspectMeditationSw() {
   const src = readFileSync(join(REPO_ROOT, "_config/sw/meditation.js"), "utf-8");
-  // Strip `import ... from "..."` lines (single-line; multiline imports would
-  // need a smarter strip — fail loudly if we ever see one).
-  if (/^import\s[\s\S]*?\n\s*[\s\S]*?from/m.test(src)) {
-    // crude multiline-import sniff — single-line imports start and end on one line
-    const lines = src.split("\n");
-    for (let i = 0; i < lines.length; i++) {
-      if (/^import\s/.test(lines[i]) && !/;$/.test(lines[i].trim())) {
-        throw new Error(`multi-line import at _config/sw/meditation.js:${i+1} — extend the stripper`);
-      }
+  // The stripper below assumes single-line imports. Fail loudly on a multi-line one.
+  const lines = src.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    if (/^import\s/.test(lines[i]) && !/;$/.test(lines[i].trim())) {
+      throw new Error(`multi-line import at _config/sw/meditation.js:${i+1} — extend the stripper`);
     }
   }
   const stripped = src.replace(/^import\s[^;]*;\s*$/gm, "");
@@ -300,7 +296,7 @@ for (const route of audioRoutes) {
     } else if (maxEntries < sessionUrls.length) {
       fail(
         `meditation SW ExpirationPlugin maxEntries=${maxEntries} < SESSIONS.length=${sessionUrls.length}.\n` +
-        `    Some sessions will be evicted before all 16 can be cached. Bump in _config/sw/meditation.js.`
+        `    Some sessions will be evicted before all ${sessionUrls.length} can be cached. Bump in _config/sw/meditation.js.`
       );
     }
   }

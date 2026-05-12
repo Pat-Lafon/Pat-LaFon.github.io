@@ -11,7 +11,6 @@ import { getManifest } from "workbox-build";
 import * as esbuild from "esbuild";
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
-import { existsSync } from "node:fs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "..");
@@ -34,10 +33,6 @@ export async function buildServiceWorkers() {
     const dir    = join(REPO_ROOT, app.siteDir);
     const swDest = join(dir, "sw.js");
 
-    if (!existsSync(dir)) {
-      throw new Error(`SW build: ${dir} doesn't exist — eleventy build must run first`);
-    }
-
     const { manifestEntries, size, warnings } = await getManifest({
       globDirectory: dir,
       globPatterns: ["**/*.{html,js,css,png,jpg,jpeg,svg,m4a,oga,ogg,webp,json,webmanifest}"],
@@ -56,22 +51,17 @@ export async function buildServiceWorkers() {
       outfile: swDest,
       format: "iife",
       target: "es2020",
-      // Service workers run in their own global; suppress "use strict" hoisting.
       platform: "browser",
-      minify: false,
       define: {
         "self.__WB_MANIFEST": JSON.stringify(manifestEntries),
       },
       logLevel: "error",
     });
 
+    const kb = (size / 1024).toFixed(0);
+    console.log(`[sw] ${app.id}: ${manifestEntries.length} files precached, ${kb} KB${warnings.length ? ` (${warnings.length} warnings)` : ""}`);
+    for (const w of warnings) console.log(`     warn: ${w}`);
     reports.push({ app: app.id, count: manifestEntries.length, size, warnings });
-  }
-
-  for (const r of reports) {
-    const kb = (r.size / 1024).toFixed(0);
-    console.log(`[sw] ${r.app}: ${r.count} files precached, ${kb} KB${r.warnings.length ? ` (${r.warnings.length} warnings)` : ""}`);
-    for (const w of r.warnings) console.log(`     warn: ${w}`);
   }
 
   return reports;

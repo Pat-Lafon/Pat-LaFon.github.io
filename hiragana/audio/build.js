@@ -113,7 +113,6 @@ async function main() {
 
   const sources = {};
   const credits = [];
-  const aliasTargets = new Set();
 
   console.log(`Building audio for ${SYLLABLES.length} syllables...\n`);
 
@@ -125,7 +124,6 @@ async function main() {
     if (ROMAJI_ALIAS[romaji]) {
       const target = ROMAJI_ALIAS[romaji];
       sources[romaji] = { kana, file: `${target}.m4a`, alias: target };
-      aliasTargets.add(target);
       console.log(`  ALIAS  ${romaji} → ${target}`);
       continue;
     }

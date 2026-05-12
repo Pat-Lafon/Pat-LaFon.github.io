@@ -13,7 +13,11 @@ const source = readFileSync(join(__dirname, "app.js"), "utf-8");
 
 // Character count: count ["x","y"] pairs in ROWS
 const charPairs = source.match(/\["[^"]+","[^"]+"\]/g);
-const CHAR_COUNT = charPairs ? charPairs.length : 0;
+if (!charPairs || charPairs.length === 0) {
+  console.error("FAIL: Could not extract character pairs from ROWS in app.js");
+  process.exit(1);
+}
+const CHAR_COUNT = charPairs.length;
 
 // Budget: extract MAX_STORAGE_BYTES value
 const budgetMatch = source.match(/MAX_STORAGE_BYTES\s*=\s*(\d+)\s*\*\s*(\d+)/);

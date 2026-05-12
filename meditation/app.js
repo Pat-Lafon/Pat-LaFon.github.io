@@ -238,15 +238,13 @@ function breathResume() {
 }
 
 function stopBreathAudio() {
-  if (noiseSource) {
-    // AudioBufferSourceNode.stop() throws InvalidStateError if already stopped — documented spec behavior; rethrow anything else.
-    try { noiseSource.stop(); } catch (e) { if (e.name !== "InvalidStateError") throw e; }
-    noiseSource.disconnect();
-    noiseSource = null;
-  }
-  if (filterNode) { filterNode.disconnect(); filterNode = null; }
-  if (filterNode2) { filterNode2.disconnect(); filterNode2 = null; }
-  if (gainNode) { gainNode.disconnect(); gainNode = null; }
+  if (!noiseSource) return;
+  // AudioBufferSourceNode.stop() throws InvalidStateError if already stopped — documented spec behavior; rethrow anything else.
+  try { noiseSource.stop(); } catch (e) { if (e.name !== "InvalidStateError") throw e; }
+  noiseSource.disconnect(); noiseSource = null;
+  filterNode.disconnect();  filterNode = null;
+  filterNode2.disconnect(); filterNode2 = null;
+  gainNode.disconnect();    gainNode = null;
 }
 
 function breathStop(completed = false) {
@@ -460,7 +458,7 @@ function updateMediaSession(session) {
   navigator.mediaSession.setActionHandler('pause', () => audio.pause());
   navigator.mediaSession.setActionHandler('seekbackward', () => { audio.currentTime = Math.max(0, audio.currentTime - 15); });
   navigator.mediaSession.setActionHandler('seekforward', () => { audio.currentTime = Math.min(audio.duration || 0, audio.currentTime + 15); });
-  navigator.mediaSession.setActionHandler('seekto', (d) => { if (d.seekTime != null) audio.currentTime = d.seekTime; });
+  navigator.mediaSession.setActionHandler('seekto', (d) => { audio.currentTime = d.seekTime; });
   navigator.mediaSession.setActionHandler('stop', () => { playerClose.click(); });
 }
 
