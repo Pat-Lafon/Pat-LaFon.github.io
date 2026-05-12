@@ -32,6 +32,7 @@ jobs:
           urls: ${{ matrix.page.url }}
           configPath: .github/lighthouse/config-${{ matrix.preset }}.json
           uploadArtifacts: true
+          artifactName: lighthouse-results-${{ matrix.preset }}-${{ matrix.page.name }}
           temporaryPublicStorage: true
 
       - name: Format results
