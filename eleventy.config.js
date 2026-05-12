@@ -37,6 +37,7 @@ export default async function(eleventyConfig) {
 		})
 		.addPassthroughCopy("./content/feed/pretty-atom-feed.xsl")
 		.addPassthroughCopy("./content/papers")
+		.addPassthroughCopy("./content/presentations")
 		.addPassthroughCopy({ "./content/photo.jpeg": "/img/photo.jpeg" })
 		.addPassthroughCopy("./hiragana",   { filter: pwaPassthroughFilter })
 		.addPassthroughCopy("./meditation", { filter: pwaPassthroughFilter });

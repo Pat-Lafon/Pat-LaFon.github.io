@@ -16,7 +16,8 @@ advised by Professor [Ben Delaware](https://www.cs.purdue.edu/homes/bendy/).
 My paper [We've Got You Covered: Type-Guided
 Repair of Incomplete Generators](papers/cobb.pdf) has been accepted to [OOPSLA
 2025](https://2025.splashcon.org/track/OOPSLA?#event-overview).
-[Slides](papers/OOPSLA_COBB_TALK.pdf) and
+[Slides](papers/OOPSLA_COBB_TALK.pdf)
+([Keynote](presentations/oopsla-2025-coverage-complete.key)) and
 [recorded talk](https://youtu.be/j_nXuGhMFdo?t=10173)
 
 In the summer of 2025 I was a returning intern at Amazon Web Services(AWS) as an Applied
@@ -27,7 +28,8 @@ automations with respect to the AWS resources on their account.
 I presented some upcoming work on synthesizing coverage-complete test input
 generators at [MWPLS 2024](https://pl.cs.uchicago.edu/PLSummit/2024/). The
 slides are available from
-[Google Slides](https://docs.google.com/presentation/d/e/2PACX-1vRwFkr5lJ-eQdlhIbt5eFVJgRmeOvKtCs-v5-OFNea_SvWS-zoyHhkXllarlLqt-tZfcBrSuU5gWT2_/pub?start=false&loop=false&delayms=3000).
+[Google Slides](https://docs.google.com/presentation/d/e/2PACX-1vRwFkr5lJ-eQdlhIbt5eFVJgRmeOvKtCs-v5-OFNea_SvWS-zoyHhkXllarlLqt-tZfcBrSuU5gWT2_/pub?start=false&loop=false&delayms=3000)
+([Keynote](presentations/mwpls-2024-coverage-complete.key)).
 A preprint is available on Arxiv: [We've Got You Covered: Type-Guided
 Repair of Incomplete Generators](https://arxiv.org/abs/2504.06421).
 
