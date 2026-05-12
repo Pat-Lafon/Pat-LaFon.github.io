@@ -1,3 +1,4 @@
+(function () {
 // =============================================
 // Shared helpers
 // =============================================
@@ -521,3 +522,4 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js');
   });
 }
+})();
