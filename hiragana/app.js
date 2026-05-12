@@ -3,9 +3,6 @@ import htm from "./vendor/htm.js";
 
 const html = htm.bind(React.createElement);
 
-// ============================================================
-// Hiragana table - rows organized for progressive learning
-// ============================================================
 const ROWS = [
   { id: "vowels", label: "Vowels",            chars: [["あ","a"],["い","i"],["う","u"],["え","e"],["お","o"]] },
   { id: "k",      label: "K-row",             chars: [["か","ka"],["き","ki"],["く","ku"],["け","ke"],["こ","ko"]] },
@@ -84,11 +81,6 @@ function saveTodayStats(stats) {
   localStorage.setItem(STATS_KEY, JSON.stringify(data));
 }
 
-// ============================================================
-// Leitner spaced repetition: cards live in boxes 1..5.
-// Schedule is review-count based, not time-based, so sporadic
-// usage produces consistent drilling regardless of calendar gaps.
-// ============================================================
 function applyGrade(card, quality, reviewCount) {
   // quality: 0=forgot, 1=slow, 2=recalled, 3=instant
   let box = card.box;
@@ -107,10 +99,8 @@ function nextDueAt(card) {
   return card.lastReviewedAt + BOX_CADENCE[card.box];
 }
 
-// Alternate accepted romaji (pronunciation-based aliases for typing variants)
 const ALT_ROMAJI = { "ぢ": ["ji"], "づ": ["zu"], "ふ": ["hu"], "を": ["o"] };
 
-// Mnemonic images — shown on wrong answers for base hiragana
 const MNEMONICS = {
   "あ": "a", "い": "i", "う": "u", "え": "e", "お": "o",
   "か": "ka", "き": "ki", "く": "ku", "け": "ke", "こ": "ko",
@@ -146,9 +136,6 @@ function shuffle(arr) {
   return a;
 }
 
-// ============================================================
-// localStorage wrappers — actually reliable, unlike artifact storage
-// ============================================================
 function isValidCard(c) {
   return c && typeof c.kana === "string" && typeof c.romaji === "string"
     && typeof c.box === "number" && typeof c.lastReviewedAt === "number";
@@ -180,9 +167,6 @@ function saveState(state) {
   localStorage.setItem(STORAGE_KEY, json);
 }
 
-// ============================================================
-// Main App
-// ============================================================
 export function App() {
   const [enabledRows, setEnabledRows] = useState(DEFAULT_ENABLED);
   const [cards, setCards] = useState({});
@@ -197,7 +181,6 @@ export function App() {
   const inputRef = useRef(null);
   const jaVoiceRef = useRef(null);
 
-  // Preload Japanese voice (voices load asynchronously in some browsers)
   useEffect(() => {
     function findJaVoice() {
       const voices = window.speechSynthesis?.getVoices() || [];
@@ -209,7 +192,6 @@ export function App() {
     return () => window.speechSynthesis?.removeEventListener("voiceschanged", findJaVoice);
   }, []);
 
-  // Load from localStorage on mount (synchronous, simple, reliable)
   useEffect(() => {
     const saved = loadState();
     if (saved) {
@@ -224,19 +206,16 @@ export function App() {
     setLoaded(true);
   }, []);
 
-  // Save on any change
   useEffect(() => {
     if (!loaded) return;
     saveState({ enabledRows, cards, reviewCount });
   }, [enabledRows, cards, reviewCount, loaded]);
 
-  // Save stats on change
   useEffect(() => {
     if (!loaded) return;
     saveTodayStats(stats);
   }, [stats, loaded]);
 
-  // Ensure cards exist for every char in enabled rows
   useEffect(() => {
     if (!loaded) return;
     setCards((prev) => {
@@ -331,7 +310,6 @@ export function App() {
     setCurrent(pickNext(cards));
   }
 
-  // Pick initial card when loaded
   useEffect(() => {
     if (loaded && !current) {
       const next = pickNext();
@@ -339,7 +317,6 @@ export function App() {
     }
   }, [loaded, cards, enabledRows]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Enter to continue from wrong-answer
   useEffect(() => {
     function onKey(e) {
       if (e.key === "Enter" && revealed && feedback && !feedback.correct) {
@@ -424,9 +401,6 @@ export function App() {
   `;
 }
 
-// ============================================================
-// Practice view
-// ============================================================
 function PracticeView({ current, input, setInput, revealed, feedback, handleSubmit, grade, nextCard, speak, inputRef, dueCount, learnedCount, totalCount, accuracy }) {
   const [mnemonicFailed, setMnemonicFailed] = useState(false);
 
@@ -590,9 +564,6 @@ function SpeakerIcon() {
   `;
 }
 
-// ============================================================
-// Settings view
-// ============================================================
 function SettingsView({ enabledRows, toggleRow, cards, onReset, reviewCount }) {
   return html`
     <div>

@@ -1,4 +1,17 @@
 // =============================================
+// Shared helpers
+// =============================================
+const breatheView = document.getElementById('breathe-view');
+const guidedView = document.getElementById('guided-view');
+
+function formatMMSS(sec) {
+  if (!isFinite(sec) || sec < 0) return '0:00';
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+// =============================================
 // Tab navigation
 // =============================================
 const tabBtns = document.querySelectorAll('.tab-btn');
@@ -167,21 +180,14 @@ function startPhase() {
   });
 }
 
-function breathFormatTime(ms) {
-  const totalSec = Math.max(0, Math.ceil(ms / 1000));
-  const m = Math.floor(totalSec / 60);
-  const s = totalSec % 60;
-  return `${m}:${s.toString().padStart(2, '0')}`;
-}
-
 function updateRemaining(now) {
   if (sessionMinutes === 0) {
-    remainingEl.textContent = `Elapsed ${breathFormatTime(now - sessionStart)}`;
+    remainingEl.textContent = `Elapsed ${formatMMSS(Math.ceil((now - sessionStart) / 1000))}`;
     return;
   }
   const totalMs = sessionMinutes * 60 * 1000;
   const left = totalMs - (now - sessionStart);
-  remainingEl.textContent = `${breathFormatTime(left)} remaining`;
+  remainingEl.textContent = `${formatMMSS(Math.ceil(left / 1000))} remaining`;
   if (left <= 0 && !sessionEndChimePlayed) {
     sessionEndChimePlayed = true;
     playChime(523);
@@ -274,7 +280,7 @@ stopBtn.addEventListener('click', () => breathStop(false));
 
 document.addEventListener('keydown', (e) => {
   // Only handle shortcuts when breathe view is active
-  if (!document.getElementById('breathe-view').classList.contains('active')) return;
+  if (!breatheView.classList.contains('active')) return;
   if (e.key === 'Enter') {
     if (!running && !paused) breathStart();
     else if (paused) breathResume();
@@ -348,11 +354,12 @@ const cacheClearBtn = document.getElementById('cacheClear');
 let currentSession = null;
 let seeking = false;
 
-function guidedFormatTime(sec) {
-  if (!isFinite(sec) || sec < 0) return '0:00';
-  const m = Math.floor(sec / 60);
-  const s = Math.floor(sec % 60);
-  return `${m}:${s.toString().padStart(2, '0')}`;
+function spinner(label) {
+  return `<span class="spinner">↻</span> ${label}…`;
+}
+
+function setPlayIcon(playing) {
+  playBtn.innerHTML = playing ? '❚❚' : '▶';
 }
 
 // --- Session list rendering ---
@@ -385,10 +392,7 @@ function playSession(session) {
   });
   playerEl.classList.add('active');
   playerTitle.textContent = `${session.title} — ${session.source}`;
-  playerStatus.textContent = '';
-  playerStatus.className = 'player-status';
-  playerStatus.innerHTML = '<span class="spinner">\u21BB</span> Loading\u2026';
-  playBtn.innerHTML = '\u275A\u275A';
+  playerStatus.innerHTML = spinner('Loading');
   renderSessions();
   updateMediaSession(session);
   // The SW's CacheFirst route caches the audio on first <audio src> fetch.
@@ -398,31 +402,25 @@ function playSession(session) {
 
 playBtn.addEventListener('click', () => {
   if (!audio.src) return;
-  if (audio.paused) { audio.play(); playBtn.innerHTML = '\u275A\u275A'; }
-  else { audio.pause(); playBtn.innerHTML = '\u25B6'; }
+  if (audio.paused) audio.play(); else audio.pause();
 });
 
 audio.addEventListener('timeupdate', () => {
   if (seeking || !audio.duration) return;
   progressBar.value = (audio.currentTime / audio.duration) * 1000;
-  elapsedEl.textContent = guidedFormatTime(audio.currentTime);
-  totalTimeEl.textContent = guidedFormatTime(audio.duration);
+  elapsedEl.textContent = formatMMSS(audio.currentTime);
+  totalTimeEl.textContent = formatMMSS(audio.duration);
 });
 
-audio.addEventListener('ended', () => {
-  playBtn.innerHTML = '\u25B6';
-  progressBar.value = 1000;
-});
-
-audio.addEventListener('pause', () => { playBtn.innerHTML = '\u25B6'; });
-audio.addEventListener('play', () => { playBtn.innerHTML = '\u275A\u275A'; });
+audio.addEventListener('ended', () => { progressBar.value = 1000; });
+audio.addEventListener('pause', () => setPlayIcon(false));
+audio.addEventListener('play', () => setPlayIcon(true));
 audio.addEventListener('playing', () => { playerStatus.textContent = ''; });
-audio.addEventListener('waiting', () => { playerStatus.innerHTML = '<span class="spinner">\u21BB</span> Buffering\u2026'; playerStatus.className = 'player-status'; });
+audio.addEventListener('waiting', () => { playerStatus.innerHTML = spinner('Buffering'); playerStatus.className = 'player-status'; });
 audio.addEventListener('canplaythrough', () => { renderSessions(); updateCacheSize(); });
 audio.addEventListener('error', () => {
   playerStatus.textContent = 'Failed to load audio. The source may be unavailable.';
   playerStatus.className = 'player-status error';
-  playBtn.innerHTML = '\u25B6';
 });
 
 progressBar.addEventListener('input', () => { seeking = true; });
@@ -436,7 +434,6 @@ playerClose.addEventListener('click', () => {
   audio.src = '';
   currentSession = null;
   playerEl.classList.remove('active');
-  playBtn.innerHTML = '\u25B6';
   progressBar.value = 0;
   elapsedEl.textContent = '0:00';
   totalTimeEl.textContent = '0:00';
@@ -491,7 +488,7 @@ cacheClearBtn.addEventListener('click', clearCache);
 
 // --- Keyboard shortcuts for guided view ---
 document.addEventListener('keydown', (e) => {
-  if (!document.getElementById('guided-view').classList.contains('active')) return;
+  if (!guidedView.classList.contains('active')) return;
   if (!audio.src || !currentSession) return;
   if (e.key === ' ') {
     e.preventDefault();
