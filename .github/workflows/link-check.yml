@@ -19,6 +19,11 @@ jobs:
           node-version: '20'
       - run: npm ci
       - run: npm run build
+      - name: Extract meditation audio URLs
+        # Lychee doesn't parse JS, so surface the hardcoded audio URLs from
+        # meditation/app.js as a plaintext file it can scan. Not shipped to
+        # _site — only exists in CI.
+        run: grep -oE 'https?://[^"'\''`)[:space:]]+\.(mp3|m4a|wav|ogg)' meditation/app.js | sort -u > meditation-audio-urls.txt
       - name: Check links
         uses: lycheeverse/lychee-action@v2
         with:
@@ -30,4 +35,5 @@ jobs:
             --root-dir ${{ github.workspace }}/_site
             --accept '200..=299, 403, 429'
             _site
+            meditation-audio-urls.txt
           fail: true
