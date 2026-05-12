@@ -25,8 +25,12 @@ export default async function(eleventyConfig) {
 		.addPassthroughCopy("./content/feed/pretty-atom-feed.xsl")
 		.addPassthroughCopy("./content/papers")
 		.addPassthroughCopy({ "./content/photo.jpeg": "/img/photo.jpeg" })
-		.addPassthroughCopy("./hiragana")
-		.addPassthroughCopy("./meditation");
+		.addPassthroughCopy("./hiragana", {
+			filter: (path) => !path.endsWith("TODO.md"),
+		})
+		.addPassthroughCopy("./meditation", {
+			filter: (path) => !path.endsWith("TODO.md"),
+		});
 
 	// Run Eleventy when these files change:
 	// https://www.11ty.dev/docs/watch-serve/#add-your-own-watch-targets
