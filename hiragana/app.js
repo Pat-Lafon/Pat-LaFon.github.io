@@ -323,7 +323,6 @@ export function App() {
     setRevealed(false);
     setFeedback(null);
     setInput("");
-    setTimeout(() => inputRef.current?.focus(), 0);
   }
 
   function nextCard() {
@@ -331,7 +330,6 @@ export function App() {
     setFeedback(null);
     setInput("");
     setCurrent(pickNext(cards));
-    setTimeout(() => inputRef.current?.focus(), 0);
   }
 
   // Pick initial card when loaded
@@ -431,6 +429,13 @@ export function App() {
 // Practice view
 // ============================================================
 function PracticeView({ current, input, setInput, revealed, feedback, handleSubmit, grade, nextCard, speak, inputRef, dueCount, learnedCount, totalCount, accuracy }) {
+  const [mnemonicFailed, setMnemonicFailed] = useState(false);
+
+  useEffect(() => {
+    setMnemonicFailed(false);
+    if (!revealed) inputRef.current?.focus();
+  }, [current?.kana, revealed]); // eslint-disable-line react-hooks/exhaustive-deps
+
   if (!current) {
     return html`
       <div class="text-center py-20 flex-1 flex items-center justify-center">
@@ -499,12 +504,12 @@ function PracticeView({ current, input, setInput, revealed, feedback, handleSubm
                 <div class="text-xs italic text-stone-500 mt-2">
                   you typed "${input}"
                 </div>
-                ${MNEMONICS[current.kana] && html`
+                ${MNEMONICS[current.kana] && !mnemonicFailed && html`
                   <img
                     src=${`./mnemonics/${MNEMONICS[current.kana]}.png`}
                     alt=${`Mnemonic for ${current.kana}`}
                     loading="lazy"
-                    onError=${(e) => { e.target.style.display = 'none'; }}
+                    onError=${() => setMnemonicFailed(true)}
                     class="mt-3 rounded-lg shadow-sm"
                     style=${{ maxWidth: "200px", maxHeight: "200px", margin: "12px auto 0" }}
                   />
