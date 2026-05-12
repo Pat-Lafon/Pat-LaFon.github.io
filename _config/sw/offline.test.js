@@ -144,21 +144,12 @@ function inspectMeditationSw() {
   class StubCacheableResponsePlugin {
     constructor(config) { this.kind = "CacheableResponsePlugin"; this.config = config; }
   }
-  class StubRangedResponsePlugin {
-    constructor(config) { this.kind = "RangedResponsePlugin"; this.config = config; }
-  }
   class StubCacheFirst {
     constructor(config) {
       this.strategy = "CacheFirst";
       this.cacheName = config.cacheName;
       this.plugins = config.plugins || [];
     }
-  }
-  class StubNetworkFirst {
-    constructor(config) { this.strategy = "NetworkFirst"; this.cacheName = config?.cacheName; this.plugins = config?.plugins || []; }
-  }
-  class StubStaleWhileRevalidate {
-    constructor(config) { this.strategy = "StaleWhileRevalidate"; this.cacheName = config?.cacheName; this.plugins = config?.plugins || []; }
   }
   function stubRegisterRoute(matcher, strategy) { routes.push({ matcher, strategy }); }
   function stubPrecacheAndRoute(manifest) { precachedManifests.push(manifest); }
@@ -167,21 +158,18 @@ function inspectMeditationSw() {
   const stubSelf = {
     skipWaiting: () => {},
     clients: { claim: () => {} },
-    location: { origin: "https://pat-lafon.github.io" },
     __WB_MANIFEST: [],
   };
 
   const stubNames = [
     "self",
     "precacheAndRoute", "cleanupOutdatedCaches", "registerRoute",
-    "CacheFirst", "NetworkFirst", "StaleWhileRevalidate",
-    "ExpirationPlugin", "CacheableResponsePlugin", "RangedResponsePlugin",
+    "CacheFirst", "ExpirationPlugin", "CacheableResponsePlugin",
   ];
   const stubValues = [
     stubSelf,
     stubPrecacheAndRoute, stubCleanupOutdatedCaches, stubRegisterRoute,
-    StubCacheFirst, StubNetworkFirst, StubStaleWhileRevalidate,
-    StubExpirationPlugin, StubCacheableResponsePlugin, StubRangedResponsePlugin,
+    StubCacheFirst, StubExpirationPlugin, StubCacheableResponsePlugin,
   ];
 
   const fn = new Function(...stubNames, stripped);

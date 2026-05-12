@@ -66,7 +66,3 @@ export async function buildServiceWorkers() {
 
   return reports;
 }
-
-if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
-  buildServiceWorkers().catch((err) => { console.error(err.message); process.exit(1); });
-}

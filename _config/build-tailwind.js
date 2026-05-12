@@ -5,11 +5,11 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join } from "node:path";
 
 const execFileAsync = promisify(execFile);
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT = resolve(__dirname, "..");
+const REPO_ROOT = join(__dirname, "..");
 
 const APPS = [
   {
@@ -33,8 +33,4 @@ export async function buildTailwind() {
 
     console.log(`[tailwind] ${app.id}: built ${app.output}`);
   }
-}
-
-if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
-  buildTailwind().catch((err) => { console.error(err.message); process.exit(1); });
 }

@@ -1,7 +1,3 @@
-// Meditation service worker source. Compiled by _config/build-sw.js into
-// _site/meditation/sw.js at build time; the precache manifest is auto-generated
-// from the built directory.
-
 import { precacheAndRoute, cleanupOutdatedCaches } from "workbox-precaching";
 import { registerRoute } from "workbox-routing";
 import { CacheFirst } from "workbox-strategies";
