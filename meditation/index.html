@@ -356,13 +356,13 @@
 </head>
 <body>
 
-  <div class="tab-bar">
-    <button class="tab-btn active" data-tab="breathe">Breathe</button>
-    <button class="tab-btn" data-tab="guided">Guided</button>
+  <div class="tab-bar" role="tablist">
+    <button class="tab-btn active" data-tab="breathe" role="tab" id="breathe-tab" aria-selected="true" aria-controls="breathe-view">Breathe</button>
+    <button class="tab-btn" data-tab="guided" role="tab" id="guided-tab" aria-selected="false" aria-controls="guided-view">Guided</button>
   </div>
 
   <!-- ===== Breathe View ===== -->
-  <div class="view active" id="breathe-view">
+  <div class="view active" id="breathe-view" role="tabpanel" aria-labelledby="breathe-tab">
     <h1>Box Breathing</h1>
     <div class="subtitle">4 · 4 · 4 · 4</div>
 
@@ -370,7 +370,7 @@
       <div class="box"></div>
       <div class="dot" id="dot"></div>
       <div class="center-text">
-        <div class="phase" id="phase">Ready</div>
+        <div class="phase" id="phase" aria-live="polite" aria-atomic="true">Ready</div>
         <div class="count" id="count">&mdash;</div>
       </div>
     </div>
@@ -396,17 +396,17 @@
   </div>
 
   <!-- ===== Guided View ===== -->
-  <div class="view" id="guided-view">
+  <div class="view" id="guided-view" role="tabpanel" aria-labelledby="guided-tab">
     <div class="player" id="player">
       <div style="display:flex;align-items:center;gap:8px;">
         <div class="player-title" id="playerTitle"></div>
-        <button class="player-close" id="playerClose" title="Close">&times;</button>
+        <button class="player-close" id="playerClose" title="Close" aria-label="Close">&times;</button>
       </div>
       <div class="player-status" id="playerStatus"></div>
       <div class="player-controls">
-        <button class="play-btn" id="playBtn">&#9654;</button>
+        <button class="play-btn" id="playBtn" aria-label="Play">&#9654;</button>
         <div class="progress-wrap">
-          <input type="range" class="progress-bar" id="progressBar" min="0" max="1000" value="0" />
+          <input type="range" class="progress-bar" id="progressBar" min="0" max="1000" value="0" aria-label="Playback progress" />
           <div class="player-time">
             <span id="elapsed">0:00</span>
             <span id="totalTime">0:00</span>

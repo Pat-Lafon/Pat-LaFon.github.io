@@ -18,9 +18,13 @@ const tabBtns = document.querySelectorAll('.tab-btn');
 const views = document.querySelectorAll('.view');
 tabBtns.forEach(btn => {
   btn.addEventListener('click', () => {
-    tabBtns.forEach(b => b.classList.remove('active'));
+    tabBtns.forEach(b => {
+      b.classList.remove('active');
+      b.setAttribute('aria-selected', 'false');
+    });
     views.forEach(v => v.classList.remove('active'));
     btn.classList.add('active');
+    btn.setAttribute('aria-selected', 'true');
     document.getElementById(btn.dataset.tab + '-view').classList.add('active');
   });
 });
@@ -360,6 +364,7 @@ function spinner(label) {
 
 function setPlayIcon(playing) {
   playBtn.innerHTML = playing ? '❚❚' : '▶';
+  playBtn.setAttribute('aria-label', playing ? 'Pause' : 'Play');
 }
 
 // --- Session list rendering ---
