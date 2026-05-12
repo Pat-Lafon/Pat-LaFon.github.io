@@ -434,7 +434,7 @@ function PracticeView({ current, input, setInput, revealed, feedback, handleSubm
   useEffect(() => {
     setMnemonicFailed(false);
     if (!revealed) inputRef.current?.focus();
-  }, [current?.kana, revealed]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [current?.kana, revealed, inputRef]);
 
   if (!current) {
     return html`

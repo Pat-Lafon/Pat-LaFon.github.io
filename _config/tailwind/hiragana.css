@@ -1,0 +1,4 @@
+@import "tailwindcss";
+
+@source "../../hiragana/index.html";
+@source "../../hiragana/app.js";

@@ -7,6 +7,18 @@ import { eleventyImageTransformPlugin } from "@11ty/eleventy-img";
 import pluginFilters from "./_config/filters.js";
 import { buildServiceWorkers } from "./_config/build-sw.js";
 
+// Path suffixes inside the PWA dirs that are build-time/CI-only and must not ship to _site.
+const PWA_BUILD_ONLY = [
+	"TODO.md",
+	"vendor/update.js",
+	"vendor/check-updates.js",
+	"vendor/versions.json",
+	"audio/build.js",
+	"audio/sources.json",
+];
+
+const pwaPassthroughFilter = (path) => !PWA_BUILD_ONLY.some((suffix) => path.endsWith(suffix));
+
 /** @param {import("@11ty/eleventy").UserConfig} eleventyConfig */
 export default async function(eleventyConfig) {
 	// Drafts, see also _data/eleventyDataSchema.js
@@ -25,12 +37,8 @@ export default async function(eleventyConfig) {
 		.addPassthroughCopy("./content/feed/pretty-atom-feed.xsl")
 		.addPassthroughCopy("./content/papers")
 		.addPassthroughCopy({ "./content/photo.jpeg": "/img/photo.jpeg" })
-		.addPassthroughCopy("./hiragana", {
-			filter: (path) => !path.endsWith("TODO.md"),
-		})
-		.addPassthroughCopy("./meditation", {
-			filter: (path) => !path.endsWith("TODO.md"),
-		});
+		.addPassthroughCopy("./hiragana",   { filter: pwaPassthroughFilter })
+		.addPassthroughCopy("./meditation", { filter: pwaPassthroughFilter });
 
 	// Run Eleventy when these files change:
 	// https://www.11ty.dev/docs/watch-serve/#add-your-own-watch-targets
