@@ -7,7 +7,9 @@ import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const source = readFileSync(join(__dirname, "app.js"), "utf-8");
+// Card shape now lives in srs.js; ROWS and the storage budget stay in app.js.
+const source = readFileSync(join(__dirname, "app.js"), "utf-8")
+  + "\n" + readFileSync(join(__dirname, "srs.js"), "utf-8");
 
 // --- Extract from app.js automatically ---
 

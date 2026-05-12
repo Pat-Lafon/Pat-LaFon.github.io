@@ -20,7 +20,8 @@ function validate(data) {
 
 	const result = schema.safeParse(data);
 	if (!result.success) {
-		throw new Error(fromZodError(result.error).message);
+		const where = data.page?.inputPath ?? "<unknown file>";
+		throw new Error(`${where}: ${fromZodError(result.error).message}`);
 	}
 }
 

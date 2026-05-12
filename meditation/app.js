@@ -262,6 +262,12 @@ function breathStop(completed = false) {
   running = false; paused = false;
   if (rafId) cancelAnimationFrame(rafId);
   stopBreathAudio();
+  // Close the AudioContext so it doesn't stay warm in background tabs.
+  // ensureAudio() will rebuild on the next start.
+  if (audioCtx) {
+    audioCtx.close().catch(() => {});
+    audioCtx = null;
+  }
   phaseEl.textContent = completed ? 'Complete' : 'Ready';
   countEl.textContent = '\u2014';
   dot.style.transform = 'translate(0px, 0px)';
@@ -393,8 +399,12 @@ function playSession(session) {
   currentSession = session;
   audio.src = session.url;
   audio.play().catch((e) => {
-    // AbortError fires when src changes mid-play (rapid session switch) — expected, rethrow anything else.
-    if (e.name !== "AbortError") throw e;
+    // AbortError fires when src changes mid-play (rapid session switch) — expected.
+    // For anything else, surface to the user and log so the failure isn't silent.
+    if (e.name === "AbortError") return;
+    console.error("audio.play() rejected:", e);
+    playerStatus.textContent = `Playback failed: ${e.message || e.name}`;
+    playerStatus.className = "player-status error";
   });
   playerEl.classList.add('active');
   playerTitle.textContent = `${session.title} — ${session.source}`;
@@ -411,11 +421,14 @@ playBtn.addEventListener('click', () => {
   if (audio.paused) audio.play(); else audio.pause();
 });
 
+audio.addEventListener('loadedmetadata', () => {
+  totalTimeEl.textContent = formatMMSS(audio.duration);
+});
+
 audio.addEventListener('timeupdate', () => {
   if (seeking || !audio.duration) return;
   progressBar.value = (audio.currentTime / audio.duration) * 1000;
   elapsedEl.textContent = formatMMSS(audio.currentTime);
-  totalTimeEl.textContent = formatMMSS(audio.duration);
 });
 
 audio.addEventListener('ended', () => { progressBar.value = 1000; });

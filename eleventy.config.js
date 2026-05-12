@@ -18,7 +18,8 @@ const PWA_BUILD_ONLY = [
 	"audio/sources.json",
 ];
 
-const pwaPassthroughFilter = (path) => !PWA_BUILD_ONLY.some((suffix) => path.endsWith(suffix));
+const pwaPassthroughFilter = (path) =>
+	!path.endsWith(".test.js") && !PWA_BUILD_ONLY.some((suffix) => path.endsWith(suffix));
 
 /** @param {import("@11ty/eleventy").UserConfig} eleventyConfig */
 export default async function(eleventyConfig) {

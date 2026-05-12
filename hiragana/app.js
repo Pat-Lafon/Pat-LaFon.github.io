@@ -1,5 +1,15 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import htm from "./vendor/htm.js";
+import {
+  LEARNED_BOX,
+  applyGrade,
+  isCardDue,
+  isValidCard,
+  makeFreshCard,
+  migrateLegacyCard,
+  pickNext as pickNextPure,
+  rollTodayStats,
+} from "./srs.js";
 
 const html = htm.bind(React.createElement);
 
@@ -39,12 +49,6 @@ const KANA_TO_ROMAJI = Object.fromEntries(ROWS.flatMap((r) => r.chars));
 
 const DEFAULT_ENABLED = ["vowels", "k"];
 
-// Leitner box cadences: card in box B is due every BOX_CADENCE[B] reviews.
-// Box 5 is "mastered" — surfaces only every 16 reviews.
-const BOX_CADENCE = [0, 1, 2, 4, 8, 16];
-const MAX_BOX = 5;
-const LEARNED_BOX = 3;
-
 function todayKey() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -54,20 +58,11 @@ function todayKey() {
 function loadTodayStats() {
   const raw = localStorage.getItem(STATS_KEY);
   if (!raw) return null;
-  const data = JSON.parse(raw);
-  if (!data || typeof data !== "object") return null;
-  // If it's a new day, roll today into allTime and reset
-  if (data.date !== todayKey()) {
-    const allTime = data.allTime || { reviewed: 0, correct: 0 };
-    const prev = data.today || { reviewed: 0, correct: 0 };
-    allTime.reviewed += prev.reviewed;
-    allTime.correct += prev.correct;
-    data.date = todayKey();
-    data.today = { reviewed: 0, correct: 0 };
-    data.allTime = allTime;
-    localStorage.setItem(STATS_KEY, JSON.stringify(data));
-  }
-  const s = data.today;
+  let parsed;
+  try { parsed = JSON.parse(raw); } catch { return null; }
+  const rolled = rollTodayStats(parsed, todayKey());
+  if (rolled !== parsed) localStorage.setItem(STATS_KEY, JSON.stringify(rolled));
+  const s = rolled.today;
   if (s && typeof s.reviewed === "number" && typeof s.correct === "number") return s;
   return null;
 }
@@ -79,20 +74,6 @@ function saveTodayStats(stats) {
   data.today = stats;
   data.allTime = data.allTime || { reviewed: 0, correct: 0 };
   localStorage.setItem(STATS_KEY, JSON.stringify(data));
-}
-
-function applyGrade(card, quality, reviewCount) {
-  // quality: 0=forgot, 1=slow, 2=recalled, 3=instant
-  let box = card.box;
-  if (quality === 0) box = 1;
-  else if (quality === 1) box = Math.max(1, box - 1);
-  else if (quality === 2) box = Math.min(MAX_BOX, box + 1);
-  else if (quality === 3) box = Math.min(MAX_BOX, box + 2);
-  return { ...card, box, lastReviewedAt: reviewCount };
-}
-
-function isCardDue(card, reviewCount) {
-  return (reviewCount - card.lastReviewedAt) >= BOX_CADENCE[card.box];
 }
 
 const ALT_ROMAJI = { "ぢ": ["ji"], "づ": ["zu"], "ふ": ["hu"], "を": ["o"] };
@@ -109,33 +90,6 @@ const HAS_MNEMONIC = new Set([
   "ら", "り", "る", "れ", "ろ",
   "わ", "を", "ん",
 ]);
-
-function makeFreshCard(kana, romaji, rowId) {
-  return { kana, romaji, rowId, box: 1, lastReviewedAt: -1 };
-}
-
-// Convert legacy SM-2 cards (ease/interval/reps/lapses/due) to Leitner shape.
-// Maps reps to box so users keep some progress through the migration.
-function migrateLegacyCard(c) {
-  if (typeof c.box === "number") return c;
-  const reps = typeof c.reps === "number" ? c.reps : 0;
-  const box = Math.min(MAX_BOX, Math.max(1, reps + 1));
-  return { kana: c.kana, romaji: c.romaji, rowId: c.rowId, box, lastReviewedAt: -1 };
-}
-
-function shuffle(arr) {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
-function isValidCard(c) {
-  return c && typeof c.kana === "string" && typeof c.romaji === "string"
-    && typeof c.box === "number" && typeof c.lastReviewedAt === "number";
-}
 
 function loadState() {
   const raw = localStorage.getItem(STORAGE_KEY);
@@ -224,31 +178,20 @@ export function App() {
     });
   }, [enabledRows]);
 
-  const enabledFrom = (cardMap) => Object.values(cardMap).filter(c => enabledRows.includes(c.rowId));
+  const pickNext = (cardMap = cards, count = reviewCount, exclude = current?.kana) =>
+    pickNextPure(cardMap, count, enabledRows, exclude);
 
-  function pickNext(cardMap = cards, count = reviewCount, exclude = current?.kana) {
-    const all = enabledFrom(cardMap);
-    const pool = all.length > 1 ? all.filter((c) => c.kana !== exclude) : all;
-    if (pool.length === 0) return null;
-    // Most-overdue first; among ties, lowest box (cards needing more attention); random within.
-    const due = pool.filter((c) => isCardDue(c, count));
-    const candidates = due.length ? due : pool;
-    const dueAt = (c) => c.lastReviewedAt + BOX_CADENCE[c.box];
-    const minDueAt = Math.min(...candidates.map(dueAt));
-    const mostOverdue = candidates.filter((c) => dueAt(c) === minDueAt);
-    const minBox = Math.min(...mostOverdue.map((c) => c.box));
-    const tier = mostOverdue.filter((c) => c.box === minBox);
-    return shuffle(tier)[0];
-  }
-
+  const audioPool = useRef(new Map());
   function speak(kana) {
     const romaji = KANA_TO_ROMAJI[kana];
-    if (romaji) {
-      const audio = new Audio(`./audio/${romaji}.m4a`);
-      audio.play().catch(() => speakViaTTS(kana));
-      return;
+    if (!romaji) { speakViaTTS(kana); return; }
+    let audio = audioPool.current.get(romaji);
+    if (!audio) {
+      audio = new Audio(`./audio/${romaji}.m4a`);
+      audioPool.current.set(romaji, audio);
     }
-    speakViaTTS(kana);
+    audio.currentTime = 0;
+    audio.play().catch(() => speakViaTTS(kana));
   }
 
   function speakViaTTS(kana) {
@@ -300,22 +243,27 @@ export function App() {
   }
 
   useEffect(() => {
-    if (!current) {
-      const next = pickNext();
-      if (next) setCurrent(next);
-    }
-  }, [cards, enabledRows]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (current) return;
+    const next = pickNextPure(cards, reviewCount, enabledRows, undefined);
+    if (next) setCurrent(next);
+  }, [current, cards, reviewCount, enabledRows]);
+
+  // Keep a ref pointing at the latest nextCard closure so the keydown handler
+  // can call it without re-binding on every state change (and without the
+  // stale-closure trap the old eslint-disable was masking).
+  const nextCardRef = useRef(nextCard);
+  useEffect(() => { nextCardRef.current = nextCard; });
 
   useEffect(() => {
     function onKey(e) {
       if (e.key === "Enter" && revealed && feedback && !feedback.correct) {
         e.preventDefault();
-        nextCard();
+        nextCardRef.current();
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [revealed, feedback]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [revealed, feedback]);
 
   function toggleRow(id) {
     setEnabledRows((rows) => rows.includes(id) ? rows.filter(r => r !== id) : [...rows, id]);
@@ -328,10 +276,22 @@ export function App() {
     setCurrent(null);
   }
 
-  const enabledCards = enabledFrom(cards);
-  const dueCount = enabledCards.filter(c => isCardDue(c, reviewCount)).length;
-  const learnedCount = enabledCards.filter(c => c.box >= LEARNED_BOX).length;
-  const accuracy = stats.reviewed ? Math.round((stats.correct / stats.reviewed) * 100) : null;
+  const enabledCards = useMemo(
+    () => Object.values(cards).filter(c => enabledRows.includes(c.rowId)),
+    [cards, enabledRows],
+  );
+  const dueCount = useMemo(
+    () => enabledCards.filter(c => isCardDue(c, reviewCount)).length,
+    [enabledCards, reviewCount],
+  );
+  const learnedCount = useMemo(
+    () => enabledCards.filter(c => c.box >= LEARNED_BOX).length,
+    [enabledCards],
+  );
+  const accuracy = useMemo(
+    () => stats.reviewed ? Math.round((stats.correct / stats.reviewed) * 100) : null,
+    [stats],
+  );
 
   return html`
     <div class="w-full flex flex-col" style=${{

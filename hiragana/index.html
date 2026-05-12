@@ -3,13 +3,20 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
+  <meta name="description" content="Hiragana practice with spaced repetition. Learn and review Japanese hiragana characters offline." />
   <meta name="theme-color" content="#ebe2cf" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="ひらがな" />
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icon-192.png" />
+  <link rel="modulepreload" href="./app.js" />
+  <link rel="modulepreload" href="./vendor/react.js" />
+  <link rel="modulepreload" href="./vendor/react-dom.js" />
   <title>Hiragana Practice</title>
+  <meta property="og:title" content="Hiragana Practice" />
+  <meta property="og:description" content="Spaced-repetition hiragana practice with offline support." />
+  <meta property="og:type" content="website" />
   <link rel="stylesheet" href="styles.css" />
   <style>
     html, body, #root { height: 100%; margin: 0; padding: 0; overscroll-behavior: none; }
