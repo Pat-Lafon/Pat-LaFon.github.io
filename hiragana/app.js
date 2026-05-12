@@ -95,24 +95,20 @@ function isCardDue(card, reviewCount) {
   return (reviewCount - card.lastReviewedAt) >= BOX_CADENCE[card.box];
 }
 
-function nextDueAt(card) {
-  return card.lastReviewedAt + BOX_CADENCE[card.box];
-}
-
 const ALT_ROMAJI = { "ぢ": ["ji"], "づ": ["zu"], "ふ": ["hu"], "を": ["o"] };
 
-const MNEMONICS = {
-  "あ": "a", "い": "i", "う": "u", "え": "e", "お": "o",
-  "か": "ka", "き": "ki", "く": "ku", "け": "ke", "こ": "ko",
-  "さ": "sa", "し": "shi", "す": "su", "せ": "se", "そ": "so",
-  "た": "ta", "ち": "chi", "つ": "tsu", "て": "te", "と": "to",
-  "な": "na", "に": "ni", "ぬ": "nu", "ね": "ne", "の": "no",
-  "は": "ha", "ひ": "hi", "ふ": "fu", "へ": "he", "ほ": "ho",
-  "ま": "ma", "み": "mi", "む": "mu", "め": "me", "も": "mo",
-  "や": "ya", "ゆ": "yu", "よ": "yo",
-  "ら": "ra", "り": "ri", "る": "ru", "れ": "re", "ろ": "ro",
-  "わ": "wa", "を": "wo", "ん": "n",
-};
+const HAS_MNEMONIC = new Set([
+  "あ", "い", "う", "え", "お",
+  "か", "き", "く", "け", "こ",
+  "さ", "し", "す", "せ", "そ",
+  "た", "ち", "つ", "て", "と",
+  "な", "に", "ぬ", "ね", "の",
+  "は", "ひ", "ふ", "へ", "ほ",
+  "ま", "み", "む", "め", "も",
+  "や", "ゆ", "よ",
+  "ら", "り", "る", "れ", "ろ",
+  "わ", "を", "ん",
+]);
 
 function makeFreshCard(kana, romaji, rowId) {
   return { kana, romaji, rowId, box: 1, lastReviewedAt: -1 };
@@ -243,8 +239,9 @@ export function App() {
     // Most-overdue first; among ties, lowest box (cards needing more attention); random within.
     const due = pool.filter((c) => isCardDue(c, count));
     const candidates = due.length ? due : pool;
-    const minDueAt = Math.min(...candidates.map(nextDueAt));
-    const mostOverdue = candidates.filter((c) => nextDueAt(c) === minDueAt);
+    const dueAt = (c) => c.lastReviewedAt + BOX_CADENCE[c.box];
+    const minDueAt = Math.min(...candidates.map(dueAt));
+    const mostOverdue = candidates.filter((c) => dueAt(c) === minDueAt);
     const minBox = Math.min(...mostOverdue.map((c) => c.box));
     const tier = mostOverdue.filter((c) => c.box === minBox);
     return shuffle(tier)[0];
@@ -292,11 +289,9 @@ export function App() {
     if (!card) return;
     const updated = applyGrade(card, quality, reviewCount);
     const nextCount = reviewCount + 1;
-    setCards((prev) => {
-      const newCards = { ...prev, [card.kana]: updated };
-      setCurrent(pickNext(newCards, nextCount));
-      return newCards;
-    });
+    const newCards = { ...cards, [card.kana]: updated };
+    setCards(newCards);
+    setCurrent(pickNext(newCards, nextCount));
     setReviewCount(nextCount);
     setRevealed(false);
     setFeedback(null);
@@ -392,7 +387,6 @@ export function App() {
               dueCount=${dueCount}
               learnedCount=${learnedCount}
               totalCount=${enabledCards.length}
-              stats=${stats}
               accuracy=${accuracy}
             />`
         }
@@ -477,9 +471,9 @@ function PracticeView({ current, input, setInput, revealed, feedback, handleSubm
                 <div class="text-xs italic text-stone-500 mt-2">
                   you typed "${input}"
                 </div>
-                ${MNEMONICS[current.kana] && !mnemonicFailed && html`
+                ${HAS_MNEMONIC.has(current.kana) && !mnemonicFailed && html`
                   <img
-                    src=${`./mnemonics/${MNEMONICS[current.kana]}.png`}
+                    src=${`./mnemonics/${KANA_TO_ROMAJI[current.kana]}.png`}
                     alt=${`Mnemonic for ${current.kana}`}
                     loading="lazy"
                     onError=${() => setMnemonicFailed(true)}

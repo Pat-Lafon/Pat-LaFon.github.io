@@ -28,7 +28,7 @@
 
 		/* --text-color is assigned to --color-gray-_ above */
 		--text-color-link: #1493fb;
-		--text-color-link-active: #6969f7;
+		--text-color-link-active: #8a8aff;
 		--text-color-link-visited: #a6a6f8;
 
 		--background-color: #15202b;
@@ -69,6 +69,14 @@ body {
 	position: absolute;
 	white-space: nowrap;
 	width: 1px;
+}
+
+.visually-hidden:focus {
+	clip: auto;
+	clip-path: none;
+	height: auto;
+	width: auto;
+	position: static;
 }
 
 /* Fluid images via https://www.zachleat.com/web/fluid-images/ */

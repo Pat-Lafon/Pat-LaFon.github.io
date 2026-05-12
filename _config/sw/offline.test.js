@@ -64,16 +64,21 @@ function hiraganaExpectedUrls() {
 
   // Audio: ["kana","romaji"] pairs in ROWS → audio/{romaji}.m4a
   // (Same parser pattern as hiragana/storage-budget.test.js.)
-  const pairs = [...app.matchAll(/\["[^"]+","([^"]+)"\]/g)].map(m => m[1]);
+  const pairs = [...app.matchAll(/\["([^"]+)","([^"]+)"\]/g)].map(m => [m[1], m[2]]);
+  const kanaToRomaji = Object.fromEntries(pairs);
 
-  // Mnemonics: "kana": "value" entries in MNEMONICS map → mnemonics/{value}.png
-  const mnemBlock = app.match(/const\s+MNEMONICS\s*=\s*\{([\s\S]*?)\};/);
-  if (!mnemBlock) throw new Error("could not find MNEMONICS in hiragana/app.js");
-  const mnem = [...mnemBlock[1].matchAll(/"[^"]+"\s*:\s*"([^"]+)"/g)].map(m => m[1]);
+  // Mnemonics: "kana" entries in HAS_MNEMONIC Set → mnemonics/{KANA_TO_ROMAJI[kana]}.png
+  const mnemBlock = app.match(/const\s+HAS_MNEMONIC\s*=\s*new\s+Set\(\[([\s\S]*?)\]\);/);
+  if (!mnemBlock) throw new Error("could not find HAS_MNEMONIC in hiragana/app.js");
+  const mnemKanas = [...mnemBlock[1].matchAll(/"([^"]+)"/g)].map(m => m[1]);
 
   const urls = new Set();
-  for (const r of pairs) urls.add(`audio/${r}.m4a`);
-  for (const v of mnem) urls.add(`mnemonics/${v}.png`);
+  for (const [, r] of pairs) urls.add(`audio/${r}.m4a`);
+  for (const k of mnemKanas) {
+    const r = kanaToRomaji[k];
+    if (!r) throw new Error(`HAS_MNEMONIC contains "${k}" but no romaji found in ROWS`);
+    urls.add(`mnemonics/${r}.png`);
+  }
 
   // index.html: same-origin script src, importmap entries, manifest, icons.
   // Skip cross-origin scripts (Tailwind CDN) — those are handled by a
