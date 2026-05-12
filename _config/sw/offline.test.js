@@ -20,12 +20,6 @@
 // to have produced _site/<app>/sw.js.
 //
 // Known gaps (intentionally not enforced here):
-//   - iOS Safari issues `Range: bytes=0-1` probes against <audio src>.
-//     A CacheFirst response without workbox-range-requests'
-//     RangedResponsePlugin won't serve those ranges from cache, so
-//     offline can still break on iOS even when this test passes.
-//     TODO: enforce RangedResponsePlugin once workbox-range-requests
-//     is installed.
 //   - External URL liveness (audio hosts going dead) — separate concern.
 
 import { readFileSync } from "node:fs";

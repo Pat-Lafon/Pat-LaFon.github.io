@@ -163,17 +163,28 @@ function saveState(state) {
   localStorage.setItem(STORAGE_KEY, json);
 }
 
+function loadInitialState() {
+  const saved = loadState() || {};
+  return {
+    enabledRows: Array.isArray(saved.enabledRows) && saved.enabledRows.length > 0
+      ? saved.enabledRows
+      : DEFAULT_ENABLED,
+    cards: saved.cards ?? {},
+    reviewCount: typeof saved.reviewCount === "number" ? saved.reviewCount : 0,
+  };
+}
+
 export function App() {
-  const [enabledRows, setEnabledRows] = useState(DEFAULT_ENABLED);
-  const [cards, setCards] = useState({});
-  const [reviewCount, setReviewCount] = useState(0);
+  const [initial] = useState(loadInitialState);
+  const [enabledRows, setEnabledRows] = useState(initial.enabledRows);
+  const [cards, setCards] = useState(initial.cards);
+  const [reviewCount, setReviewCount] = useState(initial.reviewCount);
   const [current, setCurrent] = useState(null);
   const [revealed, setRevealed] = useState(false);
   const [input, setInput] = useState("");
   const [feedback, setFeedback] = useState(null);
   const [stats, setStats] = useState(() => loadTodayStats() || { reviewed: 0, correct: 0 });
   const [showSettings, setShowSettings] = useState(false);
-  const [loaded, setLoaded] = useState(false);
   const inputRef = useRef(null);
   const jaVoiceRef = useRef(null);
 
@@ -189,31 +200,14 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    const saved = loadState();
-    if (saved) {
-      if (Array.isArray(saved.enabledRows) && saved.enabledRows.length > 0) {
-        setEnabledRows(saved.enabledRows);
-      }
-      setCards(saved.cards);
-      if (typeof saved.reviewCount === "number") {
-        setReviewCount(saved.reviewCount);
-      }
-    }
-    setLoaded(true);
-  }, []);
-
-  useEffect(() => {
-    if (!loaded) return;
     saveState({ enabledRows, cards, reviewCount });
-  }, [enabledRows, cards, reviewCount, loaded]);
+  }, [enabledRows, cards, reviewCount]);
 
   useEffect(() => {
-    if (!loaded) return;
     saveTodayStats(stats);
-  }, [stats, loaded]);
+  }, [stats]);
 
   useEffect(() => {
-    if (!loaded) return;
     setCards((prev) => {
       const next = { ...prev };
       let changed = false;
@@ -228,7 +222,7 @@ export function App() {
       }
       return changed ? next : prev;
     });
-  }, [enabledRows, loaded]);
+  }, [enabledRows]);
 
   const enabledFrom = (cardMap) => Object.values(cardMap).filter(c => enabledRows.includes(c.rowId));
 
@@ -306,11 +300,11 @@ export function App() {
   }
 
   useEffect(() => {
-    if (loaded && !current) {
+    if (!current) {
       const next = pickNext();
       if (next) setCurrent(next);
     }
-  }, [loaded, cards, enabledRows]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [cards, enabledRows]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     function onKey(e) {
@@ -540,6 +534,7 @@ function GradeButton({ label, sub, onClick, color }) {
   return html`
     <button
       onClick=${onClick}
+      aria-label=${`${label}, ${sub}`}
       class="py-3 px-2 border border-stone-300 hover:border-stone-700 transition-all bg-white/40 hover:bg-white/70 group"
     >
       <div class="text-sm" style=${{ color, fontWeight: 500 }}>${label}</div>
@@ -574,6 +569,7 @@ function SettingsView({ enabledRows, toggleRow, cards, onReset, reviewCount }) {
             <button
               key=${row.id}
               onClick=${() => toggleRow(row.id)}
+              aria-pressed=${enabled}
               class=${`w-full text-left flex items-center justify-between py-3 px-4 transition-all border ${
                 enabled ? "border-stone-800 bg-stone-900/5" : "border-stone-300 hover:border-stone-500 bg-white/30"
               }`}
