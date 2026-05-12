@@ -51,7 +51,6 @@ function extractManifest(swPath) {
   const src = readFileSync(swPath, "utf-8");
   const m = src.match(/\/\/\s*<define:self\.__WB_MANIFEST>\s*\n\s*var\s+define_self_WB_MANIFEST_default\s*=\s*(\[[\s\S]*?\]);/);
   if (!m) throw new Error(`could not extract __WB_MANIFEST from ${rel(swPath)} — esbuild output shape changed?`);
-  // eslint-disable-next-line no-new-func
   return new Function(`"use strict"; return (${m[1]});`)();
 }
 
@@ -189,7 +188,6 @@ function inspectMeditationSw() {
     StubExpirationPlugin, StubCacheableResponsePlugin, StubRangedResponsePlugin,
   ];
 
-  // eslint-disable-next-line no-new-func
   const fn = new Function(...stubNames, stripped);
   fn(...stubValues);
 
