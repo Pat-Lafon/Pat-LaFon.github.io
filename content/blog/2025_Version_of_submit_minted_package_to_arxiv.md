@@ -1,6 +1,6 @@
 ---
 title: Submitting a Paper to Arxiv with Minted (2025)
-description: This is a post on My Blog about touchpoints and circling wagons.
+description: Working notes on getting a LaTeX paper that uses the minted package through arXiv's build pipeline in 2025, including the frozencache workaround.
 date: 2025-04-14
 tags: [latex, research]
 ---
