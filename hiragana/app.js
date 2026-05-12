@@ -158,12 +158,11 @@ function loadState() {
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) return null;
   const parsed = JSON.parse(raw);
-  if (parsed.cards && typeof parsed.cards === "object") {
-    for (const [k, v] of Object.entries(parsed.cards)) {
-      const migrated = migrateLegacyCard(v);
-      if (isValidCard(migrated)) parsed.cards[k] = migrated;
-      else delete parsed.cards[k];
-    }
+  if (!parsed.cards || typeof parsed.cards !== "object") parsed.cards = {};
+  for (const [k, v] of Object.entries(parsed.cards)) {
+    const migrated = migrateLegacyCard(v);
+    if (isValidCard(migrated)) parsed.cards[k] = migrated;
+    else delete parsed.cards[k];
   }
   return parsed;
 }
@@ -217,9 +216,7 @@ export function App() {
       if (Array.isArray(saved.enabledRows) && saved.enabledRows.length > 0) {
         setEnabledRows(saved.enabledRows);
       }
-      if (saved.cards && typeof saved.cards === "object") {
-        setCards(saved.cards);
-      }
+      setCards(saved.cards);
       if (typeof saved.reviewCount === "number") {
         setReviewCount(saved.reviewCount);
       }
@@ -258,8 +255,10 @@ export function App() {
     });
   }, [enabledRows, loaded]);
 
+  const enabledFrom = (cardMap) => Object.values(cardMap).filter(c => enabledRows.includes(c.rowId));
+
   function pickNext(cardMap = cards, count = reviewCount, exclude = current?.kana) {
-    const all = Object.values(cardMap).filter((c) => enabledRows.includes(c.rowId));
+    const all = enabledFrom(cardMap);
     const pool = all.length > 1 ? all.filter((c) => c.kana !== exclude) : all;
     if (pool.length === 0) return null;
     // Most-overdue first; among ties, lowest box (cards needing more attention); random within.
@@ -363,7 +362,7 @@ export function App() {
     setCurrent(null);
   }
 
-  const enabledCards = Object.values(cards).filter(c => enabledRows.includes(c.rowId));
+  const enabledCards = enabledFrom(cards);
   const dueCount = enabledCards.filter(c => isCardDue(c, reviewCount)).length;
   const learnedCount = enabledCards.filter(c => c.box >= LEARNED_BOX).length;
   const accuracy = stats.reviewed ? Math.round((stats.correct / stats.reviewed) * 100) : null;
