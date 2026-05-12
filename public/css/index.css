@@ -100,6 +100,12 @@ iframe {
 	aspect-ratio: 16/9;
 }
 
+.profile-photo {
+	float: right;
+	width: 50%;
+	margin: 0 0 1rem 1rem;
+}
+
 p:last-child {
 	margin-bottom: 0;
 }

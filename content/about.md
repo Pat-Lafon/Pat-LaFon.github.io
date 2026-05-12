@@ -7,7 +7,7 @@ const eleventyNavigation = {
 
 # About
 
-<img src="./photo.jpeg" alt="Patrick LaFontaine" style="float: right; width: 50%; margin: 0 0 1rem 1rem;"/>
+<img src="./photo.jpeg" alt="Patrick LaFontaine" class="profile-photo"/>
 
 I am a PhD student in CS at Purdue University, studying programming languages,
 formal methods, automated reasoning, program synthesis, and refinement types
