@@ -12,6 +12,17 @@ function formatMMSS(sec) {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+function el(tag, props = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === 'class') node.className = v;
+    else if (k === 'text') node.textContent = v;
+    else node.setAttribute(k, v);
+  }
+  for (const c of children) if (c) node.append(c);
+  return node;
+}
+
 // =============================================
 // Tab navigation
 // =============================================
@@ -377,20 +388,18 @@ function setPlayIcon(playing) {
 // --- Session list rendering ---
 async function renderSessions() {
   const cachedUrls = await getCachedUrls();
-  sessionListEl.innerHTML = '';
+  sessionListEl.replaceChildren();
   for (const s of SESSIONS) {
-    const item = document.createElement('div');
-    item.className = 'session-item' + (currentSession?.id === s.id ? ' playing' : '');
-    const isCached = cachedUrls.has(s.url);
-    item.innerHTML = `
-      <div class="session-info">
-        <div class="session-title">${s.title}</div>
-        <div class="session-meta">${s.source} · ${s.type}</div>
-      </div>
-      <div class="session-duration">${s.duration}</div>
-      ${isCached ? '<span class="session-cached" title="Available offline">\u2713</span>' : ''}`;
+    const item = el('div', { class: 'session-item' + (currentSession?.id === s.id ? ' playing' : '') },
+      el('div', { class: 'session-info' },
+        el('div', { class: 'session-title', text: s.title }),
+        el('div', { class: 'session-meta', text: `${s.source} · ${s.type}` }),
+      ),
+      el('div', { class: 'session-duration', text: s.duration }),
+      cachedUrls.has(s.url) && el('span', { class: 'session-cached', title: 'Available offline', text: '✓' }),
+    );
     item.addEventListener('click', () => playSession(s));
-    sessionListEl.appendChild(item);
+    sessionListEl.append(item);
   }
 }
 
@@ -530,9 +539,29 @@ document.querySelector('[data-tab="guided"]').addEventListener('click', () => {
 // =============================================
 // Service worker
 // =============================================
+// Register the SW and only ask a waiting one to activate when the user is
+// not mid-session. "Safe" = audio paused AND no breathing loop active.
+// Reasserted on visibility hide and after every audio pause/end.
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js');
+  window.addEventListener('load', async () => {
+    const reg = await navigator.serviceWorker.register('./sw.js').catch(() => null);
+    if (!reg) return;
+    const isIdle = () => audio.paused && !running && !paused;
+    const maybeSkip = () => {
+      if (reg.waiting && isIdle()) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+    };
+    reg.addEventListener('updatefound', () => {
+      const nw = reg.installing;
+      nw?.addEventListener('statechange', () => {
+        if (nw.state === 'installed') maybeSkip();
+      });
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') maybeSkip();
+    });
+    audio.addEventListener('pause', maybeSkip);
+    audio.addEventListener('ended', maybeSkip);
+    maybeSkip();
   });
 }
 })();

@@ -157,6 +157,7 @@ function inspectMeditationSw() {
   const stubSelf = {
     skipWaiting: () => {},
     clients: { claim: () => {} },
+    addEventListener: () => {},
     __WB_MANIFEST: [],
   };
 

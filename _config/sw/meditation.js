@@ -4,7 +4,12 @@ import { CacheFirst } from "workbox-strategies";
 import { ExpirationPlugin } from "workbox-expiration";
 import { CacheableResponsePlugin } from "workbox-cacheable-response";
 
-self.skipWaiting();
+// Gate skipWaiting on a page-side message so a deploy doesn't swap the
+// precache out mid-session. The page posts SKIP_WAITING only when audio is
+// paused AND no breathing session is running.
+self.addEventListener("message", (e) => {
+  if (e.data?.type === "SKIP_WAITING") self.skipWaiting();
+});
 self.clients.claim();
 cleanupOutdatedCaches();
 

@@ -43,10 +43,27 @@
     import { createRoot } from "react-dom/client";
     import { App } from "./app.js";
 
-    // Register service worker for offline support
+    // Register service worker for offline support. A new SW that finishes
+    // installing while a tab is open stays in `waiting`; we only tell it to
+    // skipWaiting when the tab is backgrounded, so an active study session
+    // never has its precache swapped underneath it.
     if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker.register("./sw.js").catch(() => {});
+      window.addEventListener("load", async () => {
+        const reg = await navigator.serviceWorker.register("./sw.js").catch(() => null);
+        if (!reg) return;
+        const maybeSkip = () => {
+          if (document.visibilityState === "hidden" && reg.waiting) {
+            reg.waiting.postMessage({ type: "SKIP_WAITING" });
+          }
+        };
+        reg.addEventListener("updatefound", () => {
+          const nw = reg.installing;
+          nw?.addEventListener("statechange", () => {
+            if (nw.state === "installed") maybeSkip();
+          });
+        });
+        document.addEventListener("visibilitychange", maybeSkip);
+        maybeSkip();
       });
     }
 
