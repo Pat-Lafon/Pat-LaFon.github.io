@@ -86,10 +86,10 @@ let gainNode = null;
 
 function updateControls() {
   const active = running || paused;
-  startBtn.style.display = active ? 'none' : '';
-  pauseBtn.style.display = running ? '' : 'none';
-  resumeBtn.style.display = paused ? '' : 'none';
-  stopBtn.style.display = active ? '' : 'none';
+  startBtn.hidden = active;
+  pauseBtn.hidden = !running;
+  resumeBtn.hidden = !paused;
+  stopBtn.hidden = !active;
   chips.forEach(c => {
     c.style.opacity = active ? '0.4' : '';
     c.style.pointerEvents = active ? 'none' : '';
@@ -406,6 +406,9 @@ async function renderSessions() {
 // --- Audio player ---
 function playSession(session) {
   currentSession = session;
+  audio.pause();
+  audio.removeAttribute('src');
+  audio.load();
   audio.src = session.url;
   audio.play().catch((e) => {
     // AbortError fires when src changes mid-play (rapid session switch) — expected.
