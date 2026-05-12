@@ -81,35 +81,34 @@ function createNoiseBuffer(ctx) {
 }
 
 function ensureAudio() {
-  try {
-    if (!audioCtx) {
-      const Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return;
-      audioCtx = new Ctx();
-    }
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-    if (!noiseSource) {
-      gainNode = audioCtx.createGain();
-      gainNode.gain.value = 0.0001;
-      filterNode = audioCtx.createBiquadFilter();
-      filterNode.type = 'lowpass';
-      filterNode.frequency.value = FILTER_LOW;
-      filterNode.Q.value = 0.5;
-      filterNode2 = audioCtx.createBiquadFilter();
-      filterNode2.type = 'lowpass';
-      filterNode2.frequency.value = FILTER_LOW;
-      filterNode2.Q.value = 0.5;
-      noiseSource = audioCtx.createBufferSource();
-      noiseSource.buffer = createNoiseBuffer(audioCtx);
-      noiseSource.loop = true;
-      noiseSource.connect(filterNode).connect(filterNode2).connect(gainNode).connect(audioCtx.destination);
-      noiseSource.start();
-    }
-  } catch (e) { /* Audio unsupported */ }
+  if (!audioCtx) {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    audioCtx = new Ctx();
+  }
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  if (!noiseSource) {
+    gainNode = audioCtx.createGain();
+    gainNode.gain.value = 0.0001;
+    filterNode = audioCtx.createBiquadFilter();
+    filterNode.type = 'lowpass';
+    filterNode.frequency.value = FILTER_LOW;
+    filterNode.Q.value = 0.5;
+    filterNode2 = audioCtx.createBiquadFilter();
+    filterNode2.type = 'lowpass';
+    filterNode2.frequency.value = FILTER_LOW;
+    filterNode2.Q.value = 0.5;
+    noiseSource = audioCtx.createBufferSource();
+    noiseSource.buffer = createNoiseBuffer(audioCtx);
+    noiseSource.loop = true;
+    noiseSource.connect(filterNode).connect(filterNode2).connect(gainNode).connect(audioCtx.destination);
+    noiseSource.start();
+  }
 }
 
 function vibrate(ms) {
-  try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {}
+  if (!navigator.vibrate) return;
+  navigator.vibrate(ms);
 }
 
 function playChime(freq) {
@@ -239,7 +238,12 @@ function breathResume() {
 }
 
 function stopBreathAudio() {
-  if (noiseSource) { try { noiseSource.stop(); } catch (e) {} noiseSource.disconnect(); noiseSource = null; }
+  if (noiseSource) {
+    // AudioBufferSourceNode.stop() throws InvalidStateError if already stopped — documented spec behavior; rethrow anything else.
+    try { noiseSource.stop(); } catch (e) { if (e.name !== "InvalidStateError") throw e; }
+    noiseSource.disconnect();
+    noiseSource = null;
+  }
   if (filterNode) { filterNode.disconnect(); filterNode = null; }
   if (filterNode2) { filterNode2.disconnect(); filterNode2 = null; }
   if (gainNode) { gainNode.disconnect(); gainNode = null; }
@@ -377,7 +381,10 @@ async function renderSessions() {
 function playSession(session) {
   currentSession = session;
   audio.src = session.url;
-  audio.play().catch(() => {});
+  audio.play().catch((e) => {
+    // AbortError fires when src changes mid-play (rapid session switch) — expected, rethrow anything else.
+    if (e.name !== "AbortError") throw e;
+  });
   playerEl.classList.add('active');
   playerTitle.textContent = `${session.title} — ${session.source}`;
   playerStatus.textContent = '';
@@ -391,15 +398,14 @@ function playSession(session) {
 }
 
 async function cacheIfNeeded(url) {
-  try {
-    const cache = await caches.open(AUDIO_CACHE);
-    const existing = await cache.match(url);
-    if (existing) return;
-    const resp = await fetch(url);
-    if (resp.ok) await cache.put(url, resp);
-    renderSessions();
-    updateCacheSize();
-  } catch {}
+  const cache = await caches.open(AUDIO_CACHE);
+  const existing = await cache.match(url);
+  if (existing) return;
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`cacheIfNeeded: fetch ${url} returned ${resp.status}`);
+  await cache.put(url, resp);
+  renderSessions();
+  updateCacheSize();
 }
 
 playBtn.addEventListener('click', () => {
@@ -469,31 +475,27 @@ function updateMediaSession(session) {
 
 // --- Cache management ---
 async function getCachedUrls() {
-  try {
-    const cache = await caches.open(AUDIO_CACHE);
-    const keys = await cache.keys();
-    return new Set(keys.map(r => r.url));
-  } catch { return new Set(); }
+  const cache = await caches.open(AUDIO_CACHE);
+  const keys = await cache.keys();
+  return new Set(keys.map(r => r.url));
 }
 
 async function clearCache() {
-  try { await caches.delete(AUDIO_CACHE); } catch {}
+  await caches.delete(AUDIO_CACHE);
   renderSessions();
   updateCacheSize();
 }
 
 async function updateCacheSize() {
-  try {
-    if ('storage' in navigator && 'estimate' in navigator.storage) {
-      const est = await navigator.storage.estimate();
-      const mb = ((est.usage || 0) / (1024 * 1024)).toFixed(1);
-      cacheSizeEl.textContent = `Cached: ~${mb} MB`;
-    } else {
-      const cache = await caches.open(AUDIO_CACHE);
-      const keys = await cache.keys();
-      cacheSizeEl.textContent = `Cached: ${keys.length} session${keys.length !== 1 ? 's' : ''}`;
-    }
-  } catch { cacheSizeEl.textContent = 'Cached: 0 MB'; }
+  if ('storage' in navigator && 'estimate' in navigator.storage) {
+    const est = await navigator.storage.estimate();
+    const mb = ((est.usage || 0) / (1024 * 1024)).toFixed(1);
+    cacheSizeEl.textContent = `Cached: ~${mb} MB`;
+  } else {
+    const cache = await caches.open(AUDIO_CACHE);
+    const keys = await cache.keys();
+    cacheSizeEl.textContent = `Cached: ${keys.length} session${keys.length !== 1 ? 's' : ''}`;
+  }
 }
 
 cacheClearBtn.addEventListener('click', clearCache);
@@ -525,6 +527,6 @@ document.querySelector('[data-tab="guided"]').addEventListener('click', () => {
 // =============================================
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(() => {});
+    navigator.serviceWorker.register('./sw.js');
   });
 }

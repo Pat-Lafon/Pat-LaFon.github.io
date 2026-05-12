@@ -55,39 +55,33 @@ function todayKey() {
 // Stats format: { date, today: {reviewed, correct}, allTime: {reviewed, correct} }
 // Fixed size — never grows. Today rolls into allTime at midnight.
 function loadTodayStats() {
-  try {
-    const raw = localStorage.getItem(STATS_KEY);
-    if (!raw) return null;
-    const data = JSON.parse(raw);
-    if (!data || typeof data !== "object") return null;
-    // If it's a new day, roll today into allTime and reset
-    if (data.date !== todayKey()) {
-      const allTime = data.allTime || { reviewed: 0, correct: 0 };
-      const prev = data.today || { reviewed: 0, correct: 0 };
-      allTime.reviewed += prev.reviewed;
-      allTime.correct += prev.correct;
-      data.date = todayKey();
-      data.today = { reviewed: 0, correct: 0 };
-      data.allTime = allTime;
-      localStorage.setItem(STATS_KEY, JSON.stringify(data));
-    }
-    const s = data.today;
-    if (s && typeof s.reviewed === "number" && typeof s.correct === "number") return s;
-    return null;
-  } catch (e) { return null; }
+  const raw = localStorage.getItem(STATS_KEY);
+  if (!raw) return null;
+  const data = JSON.parse(raw);
+  if (!data || typeof data !== "object") return null;
+  // If it's a new day, roll today into allTime and reset
+  if (data.date !== todayKey()) {
+    const allTime = data.allTime || { reviewed: 0, correct: 0 };
+    const prev = data.today || { reviewed: 0, correct: 0 };
+    allTime.reviewed += prev.reviewed;
+    allTime.correct += prev.correct;
+    data.date = todayKey();
+    data.today = { reviewed: 0, correct: 0 };
+    data.allTime = allTime;
+    localStorage.setItem(STATS_KEY, JSON.stringify(data));
+  }
+  const s = data.today;
+  if (s && typeof s.reviewed === "number" && typeof s.correct === "number") return s;
+  return null;
 }
 
 function saveTodayStats(stats) {
-  try {
-    const raw = localStorage.getItem(STATS_KEY);
-    const data = raw ? JSON.parse(raw) : {};
-    data.date = data.date || todayKey();
-    data.today = stats;
-    data.allTime = data.allTime || { reviewed: 0, correct: 0 };
-    localStorage.setItem(STATS_KEY, JSON.stringify(data));
-  } catch (e) {
-    console.warn("saveTodayStats failed:", e);
-  }
+  const raw = localStorage.getItem(STATS_KEY);
+  const data = raw ? JSON.parse(raw) : {};
+  data.date = data.date || todayKey();
+  data.today = stats;
+  data.allTime = data.allTime || { reviewed: 0, correct: 0 };
+  localStorage.setItem(STATS_KEY, JSON.stringify(data));
 }
 
 // ============================================================
@@ -161,22 +155,17 @@ function isValidCard(c) {
 }
 
 function loadState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (parsed.cards && typeof parsed.cards === "object") {
-      for (const [k, v] of Object.entries(parsed.cards)) {
-        const migrated = migrateLegacyCard(v);
-        if (isValidCard(migrated)) parsed.cards[k] = migrated;
-        else delete parsed.cards[k];
-      }
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return null;
+  const parsed = JSON.parse(raw);
+  if (parsed.cards && typeof parsed.cards === "object") {
+    for (const [k, v] of Object.entries(parsed.cards)) {
+      const migrated = migrateLegacyCard(v);
+      if (isValidCard(migrated)) parsed.cards[k] = migrated;
+      else delete parsed.cards[k];
     }
-    return parsed;
-  } catch (e) {
-    console.warn("loadState failed:", e);
-    return null;
   }
+  return parsed;
 }
 
 // Max storage budget: 500KB. Actual usage is ~15KB.
@@ -294,15 +283,13 @@ export function App() {
   }
 
   function speakViaTTS(kana) {
-    try {
-      if (!window.speechSynthesis) return;
-      window.speechSynthesis.cancel();
-      const utter = new SpeechSynthesisUtterance(kana);
-      utter.lang = "ja-JP";
-      utter.rate = 0.35;
-      if (jaVoiceRef.current) utter.voice = jaVoiceRef.current;
-      window.speechSynthesis.speak(utter);
-    } catch (e) { /* skip */ }
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(kana);
+    utter.lang = "ja-JP";
+    utter.rate = 0.35;
+    if (jaVoiceRef.current) utter.voice = jaVoiceRef.current;
+    window.speechSynthesis.speak(utter);
   }
 
   function handleSubmit(e) {

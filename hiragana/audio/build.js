@@ -92,7 +92,7 @@ async function downloadAndConvert(url, outPath) {
   const buf = Buffer.from(await res.arrayBuffer());
   await writeFile(tmpOga, buf);
   await exec("ffmpeg", ["-y", "-loglevel", "error", "-i", tmpOga, "-codec:a", "aac", "-b:a", "64k", outPath]);
-  await unlink(tmpOga).catch(() => {});
+  await unlink(tmpOga);
 }
 
 async function ttsGenerate(kana, romaji, outPath) {
@@ -105,7 +105,7 @@ async function ttsGenerate(kana, romaji, outPath) {
   await exec("say", ["-v", "Kyoko", "-o", tmpAiff, utterance]);
   const filter = isMoraicN ? "volume=3.0,apad=pad_dur=0.1" : "apad=pad_dur=0.05";
   await exec("ffmpeg", ["-y", "-loglevel", "error", "-i", tmpAiff, "-af", filter, "-codec:a", "aac", "-b:a", "64k", outPath]);
-  await unlink(tmpAiff).catch(() => {});
+  await unlink(tmpAiff);
 }
 
 async function main() {
@@ -130,21 +130,17 @@ async function main() {
       continue;
     }
 
-    // Try Wikimedia first
+    // Try Wikimedia first. Probe failures throw (loud); TTS fallback only kicks in when
+    // there is no Wikimedia clip at all (probe returned null).
     const filename = `Ja-${cap(romaji)}.oga`;
-    let wikimedia = null;
-    try { wikimedia = await probeWikimedia(filename); } catch { /* network hiccup, fall through */ }
+    const wikimedia = await probeWikimedia(filename);
 
     if (wikimedia) {
-      try {
-        await downloadAndConvert(wikimedia.url, outPath);
-        sources[romaji] = { kana, file: outFile, source: "wikimedia", url: wikimedia.url };
-        credits.push({ romaji, kana, user: wikimedia.user, license: wikimedia.license, url: wikimedia.url });
-        console.log(`  WIKI   ${romaji.padEnd(4)} ← ${filename} (${wikimedia.user}, ${wikimedia.license})`);
-        continue;
-      } catch (err) {
-        console.log(`  WIKI failed for ${romaji}: ${err.message} — falling back to TTS`);
-      }
+      await downloadAndConvert(wikimedia.url, outPath);
+      sources[romaji] = { kana, file: outFile, source: "wikimedia", url: wikimedia.url };
+      credits.push({ romaji, kana, user: wikimedia.user, license: wikimedia.license, url: wikimedia.url });
+      console.log(`  WIKI   ${romaji.padEnd(4)} ← ${filename} (${wikimedia.user}, ${wikimedia.license})`);
+      continue;
     }
 
     // Fall back to local TTS
@@ -184,8 +180,8 @@ async function main() {
   if (ttsCount) lines.push(`\n${ttsCount} clips generated locally with macOS \`say -v Kyoko\` (no attribution required).`);
   await writeFile(join(OUT_DIR, "credits.md"), lines.join("\n") + "\n");
 
-  // Cleanup tmp dir
-  try { await unlink(join(TMP_DIR, "src.oga")); } catch { /* ignore */ }
+  // Cleanup tmp dir — ENOENT is fine (file may not exist), rethrow anything else.
+  try { await unlink(join(TMP_DIR, "src.oga")); } catch (e) { if (e.code !== "ENOENT") throw e; }
 
   const wikiCount = credits.length;
   const aliasCount = Object.keys(ROMAJI_ALIAS).length;
