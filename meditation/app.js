@@ -26,18 +26,34 @@ function el(tag, props = {}, ...children) {
 // =============================================
 // Tab navigation
 // =============================================
-const tabBtns = document.querySelectorAll('.tab-btn');
+const tabBtns = Array.from(document.querySelectorAll('.tab-btn'));
 const views = document.querySelectorAll('.view');
-tabBtns.forEach(btn => {
-  btn.addEventListener('click', () => {
-    tabBtns.forEach(b => {
-      b.classList.remove('active');
-      b.setAttribute('aria-selected', 'false');
-    });
-    views.forEach(v => v.classList.remove('active'));
-    btn.classList.add('active');
-    btn.setAttribute('aria-selected', 'true');
-    document.getElementById(btn.dataset.tab + '-view').classList.add('active');
+
+function activateTab(btn) {
+  tabBtns.forEach(b => {
+    const selected = b === btn;
+    b.classList.toggle('active', selected);
+    b.setAttribute('aria-selected', selected ? 'true' : 'false');
+    b.setAttribute('tabindex', selected ? '0' : '-1');
+  });
+  views.forEach(v => v.classList.remove('active'));
+  document.getElementById(btn.dataset.tab + '-view').classList.add('active');
+}
+
+tabBtns.forEach((btn, i) => {
+  btn.addEventListener('click', () => activateTab(btn));
+  btn.addEventListener('keydown', (e) => {
+    let target;
+    switch (e.key) {
+      case 'ArrowRight': target = tabBtns[(i + 1) % tabBtns.length]; break;
+      case 'ArrowLeft':  target = tabBtns[(i - 1 + tabBtns.length) % tabBtns.length]; break;
+      case 'Home':       target = tabBtns[0]; break;
+      case 'End':        target = tabBtns[tabBtns.length - 1]; break;
+      default: return;
+    }
+    e.preventDefault();
+    activateTab(target);
+    target.focus();
   });
 });
 
