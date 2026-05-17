@@ -56,9 +56,8 @@ function hiraganaExpectedUrls() {
   const app = readFileSync(join(REPO_ROOT, "hiragana/app.js"), "utf-8");
   const html = readFileSync(join(REPO_ROOT, "hiragana/index.html"), "utf-8");
 
-  // Audio: ["kana","romaji"] pairs in ROWS → audio/{romaji}.m4a
-  // (Same parser pattern as hiragana/storage-budget.test.js.)
-  const pairs = [...app.matchAll(/\["([^"]+)","([^"]+)"\]/g)].map(m => [m[1], m[2]]);
+  // Audio: kanaEntry("kana","romaji") calls in SECTIONS → audio/{romaji}.m4a
+  const pairs = [...app.matchAll(/kanaEntry\("([^"]+)","([^"]+)"\)/g)].map(m => [m[1], m[2]]);
   const kanaToRomaji = Object.fromEntries(pairs);
 
   // Mnemonics: "kana" entries in HAS_MNEMONIC Set → mnemonics/{KANA_TO_ROMAJI[kana]}.png

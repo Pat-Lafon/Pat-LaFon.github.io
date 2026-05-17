@@ -4,76 +4,91 @@ import {
   LEARNED_BOX,
   applyGrade,
   isCardDue,
-  isValidCard,
-  makeFreshCard,
-  migrateLegacyCard,
   pickNext as pickNextPure,
-  rollTodayStats,
 } from "./srs.js";
+import { numberEntry, composeNumber } from "./numbers.js";
+import {
+  hydrateCard,
+  loadState as loadStateFromStorage,
+  saveState as saveStateToStorage,
+  loadStats as loadStatsFromStorage,
+  saveStats as saveStatsToStorage,
+} from "./storage.js";
 
 const html = htm.bind(React.createElement);
 
-const ROWS = [
-  { id: "vowels", label: "Vowels",            chars: [["あ","a"],["い","i"],["う","u"],["え","e"],["お","o"]] },
-  { id: "k",      label: "K-row",             chars: [["か","ka"],["き","ki"],["く","ku"],["け","ke"],["こ","ko"]] },
-  { id: "s",      label: "S-row",             chars: [["さ","sa"],["し","shi"],["す","su"],["せ","se"],["そ","so"]] },
-  { id: "t",      label: "T-row",             chars: [["た","ta"],["ち","chi"],["つ","tsu"],["て","te"],["と","to"]] },
-  { id: "n",      label: "N-row",             chars: [["な","na"],["に","ni"],["ぬ","nu"],["ね","ne"],["の","no"]] },
-  { id: "h",      label: "H-row",             chars: [["は","ha"],["ひ","hi"],["ふ","fu"],["へ","he"],["ほ","ho"]] },
-  { id: "m",      label: "M-row",             chars: [["ま","ma"],["み","mi"],["む","mu"],["め","me"],["も","mo"]] },
-  { id: "y",      label: "Y-row",             chars: [["や","ya"],["ゆ","yu"],["よ","yo"]] },
-  { id: "r",      label: "R-row",             chars: [["ら","ra"],["り","ri"],["る","ru"],["れ","re"],["ろ","ro"]] },
-  { id: "w",      label: "W-row + n",         chars: [["わ","wa"],["を","wo"],["ん","n"]] },
-  { id: "g",      label: "G-row (dakuten)",   chars: [["が","ga"],["ぎ","gi"],["ぐ","gu"],["げ","ge"],["ご","go"]] },
-  { id: "z",      label: "Z-row (dakuten)",   chars: [["ざ","za"],["じ","ji"],["ず","zu"],["ぜ","ze"],["ぞ","zo"]] },
-  { id: "d",      label: "D-row (dakuten)",   chars: [["だ","da"],["ぢ","di"],["づ","du"],["で","de"],["ど","do"]] },
-  { id: "b",      label: "B-row (dakuten)",   chars: [["ば","ba"],["び","bi"],["ぶ","bu"],["べ","be"],["ぼ","bo"]] },
-  { id: "p",      label: "P-row (handakuten)",chars: [["ぱ","pa"],["ぴ","pi"],["ぷ","pu"],["ぺ","pe"],["ぽ","po"]] },
-  { id: "ky",     label: "Ky-combo",          chars: [["きゃ","kya"],["きゅ","kyu"],["きょ","kyo"]] },
-  { id: "sh",     label: "Sh-combo",          chars: [["しゃ","sha"],["しゅ","shu"],["しょ","sho"]] },
-  { id: "ch",     label: "Ch-combo",          chars: [["ちゃ","cha"],["ちゅ","chu"],["ちょ","cho"]] },
-  { id: "ny",     label: "Ny-combo",          chars: [["にゃ","nya"],["にゅ","nyu"],["にょ","nyo"]] },
-  { id: "hy",     label: "Hy-combo",          chars: [["ひゃ","hya"],["ひゅ","hyu"],["ひょ","hyo"]] },
-  { id: "my",     label: "My-combo",          chars: [["みゃ","mya"],["みゅ","myu"],["みょ","myo"]] },
-  { id: "ry",     label: "Ry-combo",          chars: [["りゃ","rya"],["りゅ","ryu"],["りょ","ryo"]] },
-  { id: "gy",     label: "Gy-combo",          chars: [["ぎゃ","gya"],["ぎゅ","gyu"],["ぎょ","gyo"]] },
-  { id: "jy",     label: "J-combo",           chars: [["じゃ","ja"],["じゅ","ju"],["じょ","jo"]] },
-  { id: "by",     label: "By-combo",          chars: [["びゃ","bya"],["びゅ","byu"],["びょ","byo"]] },
-  { id: "py",     label: "Py-combo",          chars: [["ぴゃ","pya"],["ぴゅ","pyu"],["ぴょ","pyo"]] },
+function kanaEntry(kana, romaji) {
+  return { id: kana, kana, romaji, prompt: null, alts: null };
+}
+
+const COMPOUND_SAMPLER = [11, 14, 17, 19, 25, 34, 47, 56, 63, 79, 88, 99];
+
+// Single source of truth. Each section has a kind (which drives behavior:
+// audio playback, mnemonic lookup, anti-cheat). Each row inside a section
+// has a unified `entries` shape: { id, kana, romaji, prompt, alts }.
+const SECTIONS = [
+  {
+    name: "Hiragana", kind: "kana",
+    rows: [
+      { id: "vowels", label: "Vowels",             entries: [kanaEntry("あ","a"),kanaEntry("い","i"),kanaEntry("う","u"),kanaEntry("え","e"),kanaEntry("お","o")] },
+      { id: "k",      label: "K-row",              entries: [kanaEntry("か","ka"),kanaEntry("き","ki"),kanaEntry("く","ku"),kanaEntry("け","ke"),kanaEntry("こ","ko")] },
+      { id: "s",      label: "S-row",              entries: [kanaEntry("さ","sa"),kanaEntry("し","shi"),kanaEntry("す","su"),kanaEntry("せ","se"),kanaEntry("そ","so")] },
+      { id: "t",      label: "T-row",              entries: [kanaEntry("た","ta"),kanaEntry("ち","chi"),kanaEntry("つ","tsu"),kanaEntry("て","te"),kanaEntry("と","to")] },
+      { id: "n",      label: "N-row",              entries: [kanaEntry("な","na"),kanaEntry("に","ni"),kanaEntry("ぬ","nu"),kanaEntry("ね","ne"),kanaEntry("の","no")] },
+      { id: "h",      label: "H-row",              entries: [kanaEntry("は","ha"),kanaEntry("ひ","hi"),kanaEntry("ふ","fu"),kanaEntry("へ","he"),kanaEntry("ほ","ho")] },
+      { id: "m",      label: "M-row",              entries: [kanaEntry("ま","ma"),kanaEntry("み","mi"),kanaEntry("む","mu"),kanaEntry("め","me"),kanaEntry("も","mo")] },
+      { id: "y",      label: "Y-row",              entries: [kanaEntry("や","ya"),kanaEntry("ゆ","yu"),kanaEntry("よ","yo")] },
+      { id: "r",      label: "R-row",              entries: [kanaEntry("ら","ra"),kanaEntry("り","ri"),kanaEntry("る","ru"),kanaEntry("れ","re"),kanaEntry("ろ","ro")] },
+      { id: "w",      label: "W-row + n",          entries: [kanaEntry("わ","wa"),kanaEntry("を","wo"),kanaEntry("ん","n")] },
+      { id: "g",      label: "G-row (dakuten)",    entries: [kanaEntry("が","ga"),kanaEntry("ぎ","gi"),kanaEntry("ぐ","gu"),kanaEntry("げ","ge"),kanaEntry("ご","go")] },
+      { id: "z",      label: "Z-row (dakuten)",    entries: [kanaEntry("ざ","za"),kanaEntry("じ","ji"),kanaEntry("ず","zu"),kanaEntry("ぜ","ze"),kanaEntry("ぞ","zo")] },
+      { id: "d",      label: "D-row (dakuten)",    entries: [kanaEntry("だ","da"),kanaEntry("ぢ","di"),kanaEntry("づ","du"),kanaEntry("で","de"),kanaEntry("ど","do")] },
+      { id: "b",      label: "B-row (dakuten)",    entries: [kanaEntry("ば","ba"),kanaEntry("び","bi"),kanaEntry("ぶ","bu"),kanaEntry("べ","be"),kanaEntry("ぼ","bo")] },
+      { id: "p",      label: "P-row (handakuten)", entries: [kanaEntry("ぱ","pa"),kanaEntry("ぴ","pi"),kanaEntry("ぷ","pu"),kanaEntry("ぺ","pe"),kanaEntry("ぽ","po")] },
+      { id: "ky",     label: "Ky-combo",           entries: [kanaEntry("きゃ","kya"),kanaEntry("きゅ","kyu"),kanaEntry("きょ","kyo")] },
+      { id: "sh",     label: "Sh-combo",           entries: [kanaEntry("しゃ","sha"),kanaEntry("しゅ","shu"),kanaEntry("しょ","sho")] },
+      { id: "ch",     label: "Ch-combo",           entries: [kanaEntry("ちゃ","cha"),kanaEntry("ちゅ","chu"),kanaEntry("ちょ","cho")] },
+      { id: "ny",     label: "Ny-combo",           entries: [kanaEntry("にゃ","nya"),kanaEntry("にゅ","nyu"),kanaEntry("にょ","nyo")] },
+      { id: "hy",     label: "Hy-combo",           entries: [kanaEntry("ひゃ","hya"),kanaEntry("ひゅ","hyu"),kanaEntry("ひょ","hyo")] },
+      { id: "my",     label: "My-combo",           entries: [kanaEntry("みゃ","mya"),kanaEntry("みゅ","myu"),kanaEntry("みょ","myo")] },
+      { id: "ry",     label: "Ry-combo",           entries: [kanaEntry("りゃ","rya"),kanaEntry("りゅ","ryu"),kanaEntry("りょ","ryo")] },
+      { id: "gy",     label: "Gy-combo",           entries: [kanaEntry("ぎゃ","gya"),kanaEntry("ぎゅ","gyu"),kanaEntry("ぎょ","gyo")] },
+      { id: "jy",     label: "J-combo",            entries: [kanaEntry("じゃ","ja"),kanaEntry("じゅ","ju"),kanaEntry("じょ","jo")] },
+      { id: "by",     label: "By-combo",           entries: [kanaEntry("びゃ","bya"),kanaEntry("びゅ","byu"),kanaEntry("びょ","byo")] },
+      { id: "py",     label: "Py-combo",           entries: [kanaEntry("ぴゃ","pya"),kanaEntry("ぴゅ","pyu"),kanaEntry("ぴょ","pyo")] },
+    ],
+  },
+  {
+    name: "Numbers", kind: "number",
+    rows: [
+      { id: "num-1-10",     label: "Numbers 1–10",                entries: Array.from({ length: 10 }, (_, i) => numberEntry(i + 1)) },
+      { id: "num-tens",     label: "Tens (20–90)",                entries: [20,30,40,50,60,70,80,90].map(numberEntry) },
+      { id: "num-compound", label: "Compound numbers (sampler)",  entries: COMPOUND_SAMPLER.map(numberEntry) },
+    ],
+  },
 ];
 
-const STORAGE_KEY = "hiragana-srs";
-const STATS_KEY = "hiragana-stats";
+// Flat row list (with section/kind injected) for places that don't care about grouping.
+const ROWS = SECTIONS.flatMap(s =>
+  s.rows.map(r => ({ ...r, section: s.name, kind: s.kind }))
+);
 
-const KANA_TO_ROMAJI = Object.fromEntries(ROWS.flatMap((r) => r.chars));
+// id → static fields for hydrating lean cards from storage and seeding fresh ones.
+export const ROWS_BY_ID = Object.fromEntries(
+  ROWS.flatMap(row => row.entries.map(e => [e.id, {
+    kana: e.kana, romaji: e.romaji, rowId: row.id,
+    kind: row.kind, prompt: e.prompt, alts: e.alts,
+  }]))
+);
+
+const KANA_TO_ROMAJI = Object.fromEntries(
+  Object.values(ROWS_BY_ID).filter(f => f.kind === "kana").map(f => [f.kana, f.romaji]),
+);
 
 const DEFAULT_ENABLED = ["vowels", "k"];
 
 function todayKey() {
   return new Date().toISOString().slice(0, 10);
-}
-
-// Stats format: { date, today: {reviewed, correct}, allTime: {reviewed, correct} }
-// Fixed size — never grows. Today rolls into allTime at midnight.
-function loadTodayStats() {
-  const raw = localStorage.getItem(STATS_KEY);
-  if (!raw) return null;
-  let parsed;
-  try { parsed = JSON.parse(raw); } catch { return null; }
-  const rolled = rollTodayStats(parsed, todayKey());
-  if (rolled !== parsed) localStorage.setItem(STATS_KEY, JSON.stringify(rolled));
-  const s = rolled.today;
-  if (s && typeof s.reviewed === "number" && typeof s.correct === "number") return s;
-  return null;
-}
-
-function saveTodayStats(stats) {
-  const raw = localStorage.getItem(STATS_KEY);
-  const data = raw ? JSON.parse(raw) : {};
-  data.date = data.date || todayKey();
-  data.today = stats;
-  data.allTime = data.allTime || { reviewed: 0, correct: 0 };
-  localStorage.setItem(STATS_KEY, JSON.stringify(data));
 }
 
 const ALT_ROMAJI = { "ぢ": ["ji"], "づ": ["zu"], "ふ": ["hu"], "を": ["o"] };
@@ -91,34 +106,8 @@ const HAS_MNEMONIC = new Set([
   "わ", "を", "ん",
 ]);
 
-function loadState() {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) return null;
-  const parsed = JSON.parse(raw);
-  if (!parsed.cards || typeof parsed.cards !== "object") parsed.cards = {};
-  for (const [k, v] of Object.entries(parsed.cards)) {
-    const migrated = migrateLegacyCard(v);
-    if (isValidCard(migrated)) parsed.cards[k] = migrated;
-    else delete parsed.cards[k];
-  }
-  return parsed;
-}
-
-// Max storage budget: 500KB. Actual usage is ~15KB.
-// Headroom for katakana, kanji, vocabulary.
-// If we exceed this, the data is corrupt — refuse to write garbage.
-const MAX_STORAGE_BYTES = 500 * 1024;
-
-function saveState(state) {
-  const json = JSON.stringify(state);
-  if (json.length > MAX_STORAGE_BYTES) {
-    throw new Error(`saveState: data exceeds ${MAX_STORAGE_BYTES} bytes (${json.length}). Data may be corrupt.`);
-  }
-  localStorage.setItem(STORAGE_KEY, json);
-}
-
 function loadInitialState() {
-  const saved = loadState() || {};
+  const saved = loadStateFromStorage(localStorage, ROWS_BY_ID) || {};
   return {
     enabledRows: Array.isArray(saved.enabledRows) && saved.enabledRows.length > 0
       ? saved.enabledRows
@@ -137,7 +126,7 @@ export function App() {
   const [revealed, setRevealed] = useState(false);
   const [input, setInput] = useState("");
   const [feedback, setFeedback] = useState(null);
-  const [stats, setStats] = useState(() => loadTodayStats() || { reviewed: 0, correct: 0 });
+  const [stats, setStats] = useState(() => loadStatsFromStorage(localStorage, todayKey()));
   const [showSettings, setShowSettings] = useState(false);
   const inputRef = useRef(null);
   const jaVoiceRef = useRef(null);
@@ -154,50 +143,52 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    saveState({ enabledRows, cards, reviewCount });
+    saveStateToStorage(localStorage, { enabledRows, cards, reviewCount });
   }, [enabledRows, cards, reviewCount]);
 
   useEffect(() => {
-    saveTodayStats(stats);
+    saveStatsToStorage(localStorage, stats);
   }, [stats]);
 
   useEffect(() => {
     setCards((prev) => {
       const next = { ...prev };
       let changed = false;
-      for (const row of ROWS) {
-        if (!enabledRows.includes(row.id)) continue;
-        for (const [kana, romaji] of row.chars) {
-          if (!next[kana]) {
-            next[kana] = makeFreshCard(kana, romaji, row.id);
-            changed = true;
-          }
-        }
+      const freshLean = { box: 1, lastReviewedAt: -1 };
+      const enabled = new Set(enabledRows);
+      for (const [id, fields] of Object.entries(ROWS_BY_ID)) {
+        if (!enabled.has(fields.rowId) || next[id]) continue;
+        next[id] = hydrateCard(id, freshLean, ROWS_BY_ID);
+        changed = true;
       }
       return changed ? next : prev;
     });
   }, [enabledRows]);
 
-  const pickNext = (cardMap = cards, count = reviewCount, exclude = current?.kana) =>
+  const pickNext = (cardMap = cards, count = reviewCount, exclude = current?.id) =>
     pickNextPure(cardMap, count, enabledRows, exclude);
 
   const audioPool = useRef(new Map());
-  function speak(kana) {
-    const romaji = KANA_TO_ROMAJI[kana];
-    if (!romaji) { speakViaTTS(kana); return; }
+  function speak(card) {
+    // Accepts a card object; for number cards we route to TTS with the kana reading
+    // (no per-syllable audio file for things like "にじゅういち").
+    if (!card) return;
+    if (card.kind === "number") { speakViaTTS(card.kana); return; }
+    const romaji = KANA_TO_ROMAJI[card.kana];
+    if (!romaji) { speakViaTTS(card.kana); return; }
     let audio = audioPool.current.get(romaji);
     if (!audio) {
       audio = new Audio(`./audio/${romaji}.m4a`);
       audioPool.current.set(romaji, audio);
     }
     audio.currentTime = 0;
-    audio.play().catch(() => speakViaTTS(kana));
+    audio.play().catch(() => speakViaTTS(card.kana));
   }
 
-  function speakViaTTS(kana) {
+  function speakViaTTS(text) {
     if (!window.speechSynthesis) return;
     window.speechSynthesis.cancel();
-    const utter = new SpeechSynthesisUtterance(kana);
+    const utter = new SpeechSynthesisUtterance(text);
     utter.lang = "ja-JP";
     utter.rate = 0.35;
     if (jaVoiceRef.current) utter.voice = jaVoiceRef.current;
@@ -207,17 +198,25 @@ export function App() {
   function handleSubmit(e) {
     e?.preventDefault();
     if (!current || revealed) return;
-    const guess = input.trim().toLowerCase();
+    // Normalize: lowercase + strip all whitespace so "ni juu ichi" === "nijuuichi".
+    const guess = input.toLowerCase().replace(/\s+/g, "");
     if (!guess) return;
-    const alts = ALT_ROMAJI[current.kana] || [];
-    const correct = guess === current.romaji.toLowerCase() || alts.includes(guess);
+    // Anti-cheat for number cards: refuse pure-digit input (would bypass recall).
+    const digitBypass = current.kind === "number" && /^\d+$/.test(guess);
+    const altsForKana = ALT_ROMAJI[current.kana] || [];
+    const cardAlts = current.alts || [];
+    const correct = !digitBypass && (
+      guess === current.romaji.toLowerCase()
+      || altsForKana.includes(guess)
+      || cardAlts.includes(guess)
+    );
     setFeedback({ correct, answer: current.romaji });
     setRevealed(true);
-    setStats((s) => ({ reviewed: s.reviewed + 1, correct: s.correct + (correct ? 1 : 0) }));
-    speak(current.kana);
+    setStats((s) => ({ ...s, reviewed: s.reviewed + 1, correct: s.correct + (correct ? 1 : 0) }));
+    speak(current);
     if (!correct) {
       const updated = applyGrade(current, 0, reviewCount);
-      setCards((prev) => ({ ...prev, [current.kana]: updated }));
+      setCards((prev) => ({ ...prev, [current.id]: updated }));
       setReviewCount((n) => n + 1);
     }
   }
@@ -226,8 +225,8 @@ export function App() {
     if (!card) return;
     const updated = applyGrade(card, quality, reviewCount);
     const nextCount = reviewCount + 1;
-    const newCards = { ...cards, [card.kana]: updated };
-    setCards(newCards);
+    const newCards = { ...cards, [card.id]: updated };
+    setCards((prev) => ({ ...prev, [card.id]: updated }));
     setCurrent(pickNext(newCards, nextCount));
     setReviewCount(nextCount);
     setRevealed(false);
@@ -355,7 +354,7 @@ function PracticeView({ current, input, setInput, revealed, feedback, handleSubm
   useEffect(() => {
     setMnemonicFailed(false);
     if (!revealed) inputRef.current?.focus();
-  }, [current?.kana, revealed, inputRef]);
+  }, [current?.id, revealed, inputRef]);
 
   if (!current) {
     return html`
@@ -390,8 +389,8 @@ function PracticeView({ current, input, setInput, revealed, feedback, handleSubm
           transition: "background 0.3s",
         }}>
           <div
-            key=${current.kana}
-            onClick=${() => revealed && speak(current.kana)}
+            key=${current.id}
+            onClick=${() => revealed && speak(current)}
             class="text-stone-900 select-none leading-none"
             style=${{
               fontFamily: "'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', serif",
@@ -401,7 +400,7 @@ function PracticeView({ current, input, setInput, revealed, feedback, handleSubm
               cursor: revealed ? "pointer" : "default",
               transition: "font-size 0.25s ease",
             }}
-          >${current.kana}</div>
+          >${current.prompt ?? current.kana}</div>
 
           ${revealed && feedback && html`
             <div class="text-center mt-3" style=${{ animation: "fadeIn 0.25s ease-out" }}>
@@ -413,7 +412,7 @@ function PracticeView({ current, input, setInput, revealed, feedback, handleSubm
                   ${feedback.answer}
                 </div>
                 <button
-                  onClick=${() => speak(current.kana)}
+                  onClick=${() => speak(current)}
                   aria-label="Replay sound"
                   class="w-9 h-9 rounded-full border flex items-center justify-center hover:bg-white/60 transition-colors"
                   style=${{ borderColor: isCorrect ? "#3a5a3a" : accent, color: isCorrect ? "#3a5a3a" : accent }}
@@ -421,6 +420,11 @@ function PracticeView({ current, input, setInput, revealed, feedback, handleSubm
                   <${SpeakerIcon} />
                 </button>
               </div>
+              ${current.kind === "number" && html`
+                <div class="text-sm italic text-stone-600 mt-1" style=${{ fontFamily: "'Hiragino Mincho ProN', 'Yu Mincho', serif" }}>
+                  ${current.kana}
+                </div>
+              `}
               ${isWrong && html`
                 <div class="text-xs italic text-stone-500 mt-2">
                   you typed "${input}"
@@ -447,6 +451,8 @@ function PracticeView({ current, input, setInput, revealed, feedback, handleSubm
               <input
                 ref=${inputRef}
                 autoFocus
+                type="text"
+                inputMode="text"
                 value=${input}
                 onChange=${(e) => setInput(e.target.value)}
                 placeholder="type romaji…"
@@ -513,49 +519,65 @@ function SpeakerIcon() {
   `;
 }
 
+function rowPreview(row) {
+  // Unified entry shape: kana cards have prompt: null, numbers have prompt: "21".
+  // Show prompt if set, else show the kana characters.
+  return row.entries.map(e => e.prompt ?? e.kana).join(" ");
+}
+
 function SettingsView({ enabledRows, toggleRow, cards, onReset, reviewCount }) {
   return html`
     <div>
       <div class="text-[10px] tracking-[0.3em] uppercase text-stone-500 mb-4">
         Toggle rows to add to your practice
       </div>
-      <div class="space-y-1">
-        ${ROWS.map((row) => {
-          const enabled = enabledRows.includes(row.id);
-          const rowCards = row.chars.map(([k]) => cards[k]).filter(Boolean);
-          const learned = rowCards.filter(c => c.box >= LEARNED_BOX).length;
-          const due = rowCards.filter(c => isCardDue(c, reviewCount)).length;
-          return html`
-            <button
-              key=${row.id}
-              onClick=${() => toggleRow(row.id)}
-              aria-pressed=${enabled}
-              class=${`w-full text-left flex items-center justify-between py-3 px-4 transition-all border ${
-                enabled ? "border-stone-800 bg-stone-900/5" : "border-stone-300 hover:border-stone-500 bg-white/30"
-              }`}
-            >
-              <div class="flex items-center gap-4">
-                <div
-                  class="w-3 h-3 rounded-full border"
-                  style=${enabled ? { backgroundColor: "#9c2a1f", borderColor: "#9c2a1f" } : { borderColor: "#a8a29e" }}
-                />
-                <div>
-                  <div class="text-stone-900" style=${{ fontWeight: 500 }}>${row.label}</div>
-                  <div class="text-2xl mt-1 text-stone-700 tracking-wider" style=${{ fontFamily: "'Hiragino Mincho ProN', serif" }}>
-                    ${row.chars.map(([k]) => k).join(" ")}
+      ${SECTIONS.map(section => html`
+        <div key=${section.name} class="mb-6">
+          <div class="text-[10px] tracking-[0.3em] uppercase text-stone-700 mb-2 pb-1 border-b border-stone-300" style=${{ fontWeight: 600 }}>
+            ${section.name}
+          </div>
+          <div class="space-y-1">
+            ${section.rows.map((row) => {
+              const enabled = enabledRows.includes(row.id);
+              const total = row.entries.length;
+              const rowCards = row.entries.map(e => cards[e.id]).filter(Boolean);
+              const learned = rowCards.filter(c => c.box >= LEARNED_BOX).length;
+              const due = rowCards.filter(c => isCardDue(c, reviewCount)).length;
+              return html`
+                <button
+                  key=${row.id}
+                  onClick=${() => toggleRow(row.id)}
+                  aria-pressed=${enabled}
+                  class=${`w-full text-left flex items-center justify-between py-3 px-4 transition-all border ${
+                    enabled ? "border-stone-800 bg-stone-900/5" : "border-stone-300 hover:border-stone-500 bg-white/30"
+                  }`}
+                >
+                  <div class="flex items-center gap-4">
+                    <div
+                      class="w-3 h-3 rounded-full border"
+                      style=${enabled ? { backgroundColor: "#9c2a1f", borderColor: "#9c2a1f" } : { borderColor: "#a8a29e" }}
+                    />
+                    <div>
+                      <div class="text-stone-900" style=${{ fontWeight: 500 }}>${row.label}</div>
+                      <div class="text-2xl mt-1 text-stone-700 tracking-wider" style=${{ fontFamily: "'Hiragino Mincho ProN', serif" }}>
+                        ${rowPreview(row)}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-              ${enabled && html`
-                <div class="text-right text-[10px] tracking-widest uppercase text-stone-500">
-                  <div>${learned}/${row.chars.length} learned</div>
-                  ${due > 0 && html`<div class="mt-0.5" style=${{ color: "#9c2a1f" }}>${due} due</div>`}
-                </div>
-              `}
-            </button>
-          `;
-        })}
-      </div>
+                  ${enabled && html`
+                    <div class="text-right text-[10px] tracking-widest uppercase text-stone-500">
+                      <div>${learned}/${total} learned</div>
+                      ${due > 0 && html`<div class="mt-0.5" style=${{ color: "#9c2a1f" }}>${due} due</div>`}
+                    </div>
+                  `}
+                </button>
+              `;
+            })}
+          </div>
+        </div>
+      `)}
+
+      <${NumberReference} />
 
       <div class="mt-10 pt-6 border-t border-stone-300">
         <button
@@ -565,6 +587,41 @@ function SettingsView({ enabledRows, toggleRow, cards, onReset, reviewCount }) {
           Reset all progress
         </button>
       </div>
+    </div>
+  `;
+}
+
+function NumberReference() {
+  const [open, setOpen] = useState(false);
+  const rows = useMemo(() => {
+    const out = [];
+    for (let i = 1; i <= 99; i++) out.push({ n: i, ...composeNumber(i) });
+    return out;
+  }, []);
+  return html`
+    <div class="mt-8 pt-6 border-t border-stone-300">
+      <button
+        onClick=${() => setOpen(o => !o)}
+        aria-expanded=${open}
+        class="text-[10px] tracking-[0.3em] uppercase text-stone-700 hover:text-red-800 transition-colors flex items-center gap-2"
+        style=${{ fontWeight: 600 }}
+      >
+        Numbers reference (1–99) <span class="text-stone-400">${open ? "−" : "+"}</span>
+      </button>
+      ${open && html`
+        <div class="mt-3 text-xs text-stone-500 italic mb-3">
+          Read the pattern, then close. <strong class="not-italic text-stone-700">tens</strong> + <strong class="not-italic text-stone-700">じゅう</strong> + <strong class="not-italic text-stone-700">ones</strong>.
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1 mt-2 text-sm">
+          ${rows.map(r => html`
+            <div key=${r.n} class="flex items-baseline gap-2 py-0.5 border-b border-stone-200/60">
+              <span class="text-stone-500 tabular-nums w-6 text-right">${r.n}</span>
+              <span class="text-stone-900" style=${{ fontFamily: "'Hiragino Mincho ProN', serif" }}>${r.kana}</span>
+              <span class="text-stone-500 italic text-xs ml-auto">${r.romaji}</span>
+            </div>
+          `)}
+        </div>
+      `}
     </div>
   `;
 }

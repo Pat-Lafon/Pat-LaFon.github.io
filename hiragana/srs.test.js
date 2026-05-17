@@ -7,11 +7,7 @@ import {
   LEARNED_BOX,
   applyGrade,
   isCardDue,
-  isValidCard,
-  makeFreshCard,
-  migrateLegacyCard,
   pickNext,
-  rollTodayStats,
 } from "./srs.js";
 
 let passed = 0;
@@ -25,21 +21,14 @@ function test(name, fn) {
   }
 }
 
-// --- makeFreshCard ---
-test("makeFreshCard produces a valid box-1 card", () => {
-  const c = makeFreshCard("あ", "a", "vowels");
-  assert.equal(c.kana, "あ");
-  assert.equal(c.romaji, "a");
-  assert.equal(c.rowId, "vowels");
-  assert.equal(c.box, 1);
-  assert.equal(c.lastReviewedAt, -1);
-  assert.ok(isValidCard(c));
-});
+// Card factory for tests only — production cards are built via storage.hydrateCard.
+function card({ id, rowId = "vowels", box = 1, lastReviewedAt = -1 }) {
+  return { id, rowId, box, lastReviewedAt };
+}
 
 // --- applyGrade ---
 test("applyGrade(0) resets to box 1", () => {
-  const c = { kana: "か", romaji: "ka", rowId: "k", box: 4, lastReviewedAt: 10 };
-  assert.equal(applyGrade(c, 0, 99).box, 1);
+  assert.equal(applyGrade(card({ id: "か", rowId: "k", box: 4, lastReviewedAt: 10 }), 0, 99).box, 1);
 });
 test("applyGrade(1) demotes one box, floored at 1", () => {
   assert.equal(applyGrade({ box: 3, lastReviewedAt: 0 }, 1, 5).box, 2);
@@ -59,7 +48,6 @@ test("applyGrade records reviewCount on lastReviewedAt", () => {
 
 // --- isCardDue ---
 test("isCardDue: gap >= cadence is due", () => {
-  // box 1, cadence 1: needs (reviewCount - lastReviewedAt) >= 1.
   assert.equal(isCardDue({ box: 1, lastReviewedAt: 5 }, 6), true);
   assert.equal(isCardDue({ box: 1, lastReviewedAt: 5 }, 5), false);
 });
@@ -71,82 +59,50 @@ test("isCardDue: higher boxes need longer gaps", () => {
   }
 });
 
-// --- isValidCard ---
-test("isValidCard rejects malformed entries", () => {
-  assert.equal(!!isValidCard(null), false);
-  assert.equal(!!isValidCard({}), false);
-  assert.equal(!!isValidCard({ kana: 1, romaji: "a", box: 1, lastReviewedAt: 0 }), false);
-  assert.equal(isValidCard({ kana: "あ", romaji: "a", box: 1, lastReviewedAt: 0 }), true);
-});
-
-// --- migrateLegacyCard ---
-test("migrateLegacyCard leaves new-shape cards alone", () => {
-  const c = { kana: "あ", romaji: "a", rowId: "vowels", box: 3, lastReviewedAt: 10 };
-  assert.equal(migrateLegacyCard(c), c);
-});
-test("migrateLegacyCard maps reps→box and clamps to MAX_BOX", () => {
-  const legacy = { kana: "あ", romaji: "a", rowId: "vowels", reps: 0 };
-  assert.equal(migrateLegacyCard(legacy).box, 1);
-  assert.equal(migrateLegacyCard({ ...legacy, reps: 2 }).box, 3);
-  assert.equal(migrateLegacyCard({ ...legacy, reps: 99 }).box, MAX_BOX);
-});
-
 // --- pickNext ---
 test("pickNext returns null when no enabled cards exist", () => {
-  const cards = { "あ": makeFreshCard("あ", "a", "vowels") };
-  assert.equal(pickNext(cards, 0, ["k"]), null);
+  assert.equal(pickNext({ "あ": card({ id: "あ" }) }, 0, ["k"]), null);
   assert.equal(pickNext({}, 0, ["vowels"]), null);
 });
 test("pickNext respects enabledRows filter", () => {
   const cards = {
-    "あ": makeFreshCard("あ", "a", "vowels"),
-    "か": makeFreshCard("か", "ka", "k"),
+    "あ": card({ id: "あ", rowId: "vowels" }),
+    "か": card({ id: "か", rowId: "k" }),
   };
-  const picked = pickNext(cards, 5, ["k"]);
-  assert.equal(picked.rowId, "k");
+  assert.equal(pickNext(cards, 5, ["k"]).rowId, "k");
 });
-test("pickNext excludes the previous kana when pool > 1", () => {
+test("pickNext excludes the previous id when pool > 1", () => {
   const cards = {
-    "あ": makeFreshCard("あ", "a", "vowels"),
-    "い": makeFreshCard("い", "i", "vowels"),
+    "あ": card({ id: "あ" }),
+    "い": card({ id: "い" }),
   };
   for (let i = 0; i < 20; i++) {
-    assert.notEqual(pickNext(cards, 5, ["vowels"], "あ").kana, "あ");
+    assert.notEqual(pickNext(cards, 5, ["vowels"], "あ").id, "あ");
   }
 });
 test("pickNext returns the only card when pool == 1, even if excluded", () => {
-  const cards = { "あ": makeFreshCard("あ", "a", "vowels") };
-  assert.equal(pickNext(cards, 5, ["vowels"], "あ").kana, "あ");
+  const cards = { "あ": card({ id: "あ" }) };
+  assert.equal(pickNext(cards, 5, ["vowels"], "あ").id, "あ");
+});
+test("pickNext excludes by id for non-kana (number) cards", () => {
+  const cards = {
+    "num-1": card({ id: "num-1", rowId: "num-1-10" }),
+    "num-2": card({ id: "num-2", rowId: "num-1-10" }),
+  };
+  for (let i = 0; i < 20; i++) {
+    assert.notEqual(pickNext(cards, 5, ["num-1-10"], "num-1").id, "num-1");
+  }
 });
 test("pickNext prefers due cards over non-due", () => {
   // box-1 card seen at review 0; at reviewCount=5 it's due. box-5 card seen
   // at review 0; at reviewCount=5 it's NOT due (cadence 16).
   const cards = {
-    "あ": { kana: "あ", romaji: "a", rowId: "vowels", box: 1, lastReviewedAt: 0 },
-    "い": { kana: "い", romaji: "i", rowId: "vowels", box: 5, lastReviewedAt: 0 },
+    "あ": card({ id: "あ", box: 1, lastReviewedAt: 0 }),
+    "い": card({ id: "い", box: 5, lastReviewedAt: 0 }),
   };
   for (let i = 0; i < 20; i++) {
-    assert.equal(pickNext(cards, 5, ["vowels"]).kana, "あ");
+    assert.equal(pickNext(cards, 5, ["vowels"]).id, "あ");
   }
-});
-
-// --- rollTodayStats ---
-test("rollTodayStats returns fresh blob for null input", () => {
-  const out = rollTodayStats(null, "2026-05-12");
-  assert.equal(out.date, "2026-05-12");
-  assert.deepEqual(out.today, { reviewed: 0, correct: 0 });
-  assert.deepEqual(out.allTime, { reviewed: 0, correct: 0 });
-});
-test("rollTodayStats returns same object when date unchanged", () => {
-  const data = { date: "2026-05-12", today: { reviewed: 3, correct: 2 }, allTime: { reviewed: 100, correct: 80 } };
-  assert.equal(rollTodayStats(data, "2026-05-12"), data);
-});
-test("rollTodayStats rolls today into allTime on date change", () => {
-  const data = { date: "2026-05-11", today: { reviewed: 5, correct: 4 }, allTime: { reviewed: 20, correct: 15 } };
-  const out = rollTodayStats(data, "2026-05-12");
-  assert.equal(out.date, "2026-05-12");
-  assert.deepEqual(out.today, { reviewed: 0, correct: 0 });
-  assert.deepEqual(out.allTime, { reviewed: 25, correct: 19 });
 });
 
 console.log(`PASS: ${passed} SRS tests`);

@@ -42,6 +42,15 @@ export default [
     },
   },
   {
+    // Pure shared modules — imported by both the React app and Node tests.
+    // `console` is available in both runtimes; we use it for storage-failure warnings.
+    files: ["hiragana/srs.js", "hiragana/numbers.js", "hiragana/storage.js"],
+    languageOptions: {
+      globals: { ...globals.browser },
+      sourceType: "module",
+    },
+  },
+  {
     files: ["hiragana/**/*.test.js", "hiragana/vendor/*.js", "hiragana/audio/build.js"],
     languageOptions: {
       globals: { ...globals.node },
