@@ -38,6 +38,9 @@ function activateTab(btn) {
   });
   views.forEach(v => v.classList.remove('active'));
   document.getElementById(btn.dataset.tab + '-view').classList.add('active');
+  // Lives here (not the click handler) so keyboard arrow-nav to the tab,
+  // which calls activateTab directly, also initializes the guided view.
+  if (btn.dataset.tab === 'guided') initGuidedOnce();
 }
 
 tabBtns.forEach((btn, i) => {
@@ -58,7 +61,7 @@ tabBtns.forEach((btn, i) => {
 });
 
 // =============================================
-// Breathe view (box breathing) — unchanged logic
+// Breathe view (box breathing)
 // =============================================
 const dot = document.getElementById('dot');
 const phaseEl = document.getElementById('phase');
@@ -73,38 +76,98 @@ const chips = document.querySelectorAll('.chip');
 let sessionMinutes = 5;
 let sessionStart = 0;
 let sessionEndChimePlayed = false;
+let endChimeTimers = [];
+// The rAF loop runs ~60fps but these only change ~1/sec (text) or smooth over
+// 0.1s (audio params), so we gate writes to avoid redundant work each frame.
+let lastCount = null;
+let lastRemainingSec = null;
+let lastSoundUpdate = -Infinity;
+const SOUND_UPDATE_MS = 66; // ~15Hz; well under the 0.1s setTargetAtTime constant
+
+function clearEndChimeTimers() {
+  endChimeTimers.forEach(clearTimeout);
+  endChimeTimers = [];
+}
 
 const SIDE = 280;
 const PHASE_MS = 4000;
-const PHASE_INHALE = 0;
-const PHASE_HOLD_FULL = 1;
-const PHASE_EXHALE = 2;
-const PHASE_HOLD_EMPTY = 3;
-const phases = ['Inhale', 'Hold', 'Exhale', 'Hold'];
 
 const FILTER_LOW = 180;
 const FILTER_HIGH = 700;
 const MAX_GAIN = 0.55;
 const CHIME_DURATION = 0.6;
 
-let running = false;
-let paused = false;
+// Box-breathing phases in order, indexed by phaseIdx. Each phase's full
+// behavior lives in one row: dot(progress)→[x,y] traces the square's perimeter,
+// sound(progress)→[cutoff, gain] drives the noise filter. Adding or retuning a
+// phase touches a single row instead of four parallel tables/switches.
+const PHASES = [
+  { name: 'Inhale', chime: 659,
+    dot:   p => [p * SIDE, 0],
+    sound: p => [FILTER_LOW + (FILTER_HIGH - FILTER_LOW) * p, MAX_GAIN * (0.15 + 0.85 * p)] },
+  { name: 'Hold', chime: 523,
+    dot:   p => [SIDE, p * SIDE],
+    sound: () => [FILTER_HIGH, MAX_GAIN * 0.5] },
+  { name: 'Exhale', chime: 392,
+    dot:   p => [SIDE - p * SIDE, SIDE],
+    sound: p => [FILTER_HIGH - (FILTER_HIGH - FILTER_LOW) * p, MAX_GAIN * (1 - 0.85 * p) * 0.85 + 0.02] },
+  { name: 'Hold', chime: 523,
+    dot:   p => [0, SIDE - p * SIDE],
+    sound: () => [FILTER_LOW, 0.02] },
+];
+
+let runState = 'idle'; // 'idle' | 'running' | 'paused'
 let rafId = null;
 let phaseIdx = 0;
 let phaseStart = 0;
-let pausedElapsed = 0;
-let pausedSessionElapsed = 0;
+let pauseStartedAt = 0;
 let audioCtx = null;
 let noiseSource = null;
-let filterNode = null;
-let filterNode2 = null;
+let filterNodes = [];
 let gainNode = null;
+let wakeLock = null;
+
+// Keep the screen awake during an active breathing session so the phone
+// doesn't lock/dim (which would suspend rAF and the audio). The browser
+// auto-releases the lock when the page is hidden — and we auto-pause then
+// anyway (visibilitychange handler below), so there's no hidden-but-running
+// state left to re-acquire for.
+async function requestWakeLock() {
+  // `wakeLock` doubles as an in-flight guard: a pending sentinel blocks a
+  // second concurrent request (which would leak the first lock), and the
+  // post-await `runState` re-check releases immediately if the session ended
+  // mid-acquire (e.g. Start then quick Pause) — otherwise that lock leaks.
+  if (!('wakeLock' in navigator) || wakeLock) return;
+  wakeLock = 'pending';
+  // request() rejects if the document isn't visible or the OS denies it
+  // (low battery, etc.) — a failed lock is non-fatal, so swallow it.
+  let lock = null;
+  try { lock = await navigator.wakeLock.request('screen'); }
+  catch { /* non-fatal */ }
+  if (runState !== 'running') { lock?.release().catch(() => {}); wakeLock = null; return; }
+  wakeLock = lock;
+}
+
+function releaseWakeLock() {
+  if (!wakeLock) return;
+  // May be the 'pending' sentinel if an acquire is still in flight; the
+  // post-await `runState` check in requestWakeLock releases that one.
+  if (typeof wakeLock !== 'string') wakeLock.release().catch(() => {});
+  wakeLock = null;
+}
+
+document.addEventListener('visibilitychange', () => {
+  // Auto-pause a hidden running session: rAF freezes while hidden but the
+  // AudioContext keeps running, so on return the phase clock jumps forward and
+  // the skipped phases' chimes fire in a burst. Pausing freezes both cleanly.
+  if (document.visibilityState === 'hidden' && runState === 'running') breathPause();
+});
 
 function updateControls() {
-  const active = running || paused;
+  const active = runState !== 'idle';
   startBtn.hidden = active;
-  pauseBtn.hidden = !running;
-  resumeBtn.hidden = !paused;
+  pauseBtn.hidden = runState !== 'running';
+  resumeBtn.hidden = runState !== 'paused';
   stopBtn.hidden = !active;
   chips.forEach(c => {
     c.style.opacity = active ? '0.4' : '';
@@ -131,22 +194,29 @@ function ensureAudio() {
     if (!Ctx) return;
     audioCtx = new Ctx();
   }
-  if (audioCtx.state === 'suspended') audioCtx.resume();
+  // Resume unconditionally rather than gating on state === 'suspended': after a
+  // breathPause→breathResume, the suspend() may not have settled yet (state
+  // still reads 'running'), so a gated resume would skip and the context would
+  // settle suspended mid-session. The control-message queue runs suspend then
+  // resume in call order, so an unconditional resume always lands on 'running'.
+  audioCtx.resume();
   if (!noiseSource) {
     gainNode = audioCtx.createGain();
     gainNode.gain.value = 0.0001;
-    filterNode = audioCtx.createBiquadFilter();
-    filterNode.type = 'lowpass';
-    filterNode.frequency.value = FILTER_LOW;
-    filterNode.Q.value = 0.5;
-    filterNode2 = audioCtx.createBiquadFilter();
-    filterNode2.type = 'lowpass';
-    filterNode2.frequency.value = FILTER_LOW;
-    filterNode2.Q.value = 0.5;
+    // Two-pole lowpass cascade for a steeper rolloff; both poles track the same
+    // cutoff in lockstep (setBreathSound).
+    filterNodes = [0, 1].map(() => {
+      const f = audioCtx.createBiquadFilter();
+      f.type = 'lowpass';
+      f.frequency.value = FILTER_LOW;
+      f.Q.value = 0.5;
+      return f;
+    });
     noiseSource = audioCtx.createBufferSource();
     noiseSource.buffer = createNoiseBuffer(audioCtx);
     noiseSource.loop = true;
-    noiseSource.connect(filterNode).connect(filterNode2).connect(gainNode).connect(audioCtx.destination);
+    const tail = filterNodes.reduce((node, f) => node.connect(f), noiseSource);
+    tail.connect(gainNode).connect(audioCtx.destination);
     noiseSource.start();
   }
 }
@@ -174,34 +244,20 @@ function playChime(freq) {
 function setBreathSound(progress) {
   if (!gainNode || !audioCtx) return;
   const t = audioCtx.currentTime;
-  let cutoff, gain;
-  switch (phaseIdx) {
-    case PHASE_INHALE: cutoff = FILTER_LOW + (FILTER_HIGH - FILTER_LOW) * progress; gain = MAX_GAIN * (0.15 + 0.85 * progress); break;
-    case PHASE_HOLD_FULL: cutoff = FILTER_HIGH; gain = MAX_GAIN * 0.5; break;
-    case PHASE_EXHALE: cutoff = FILTER_HIGH - (FILTER_HIGH - FILTER_LOW) * progress; gain = MAX_GAIN * (1 - 0.85 * progress) * 0.85 + 0.02; break;
-    case PHASE_HOLD_EMPTY: cutoff = FILTER_LOW; gain = 0.02; break;
-  }
-  filterNode.frequency.setTargetAtTime(cutoff, t, 0.1);
-  filterNode2.frequency.setTargetAtTime(cutoff, t, 0.1);
+  const [cutoff, gain] = PHASES[phaseIdx].sound(progress);
+  filterNodes.forEach(f => f.frequency.setTargetAtTime(cutoff, t, 0.1));
   gainNode.gain.setTargetAtTime(Math.max(gain, 0.0001), t, 0.1);
 }
 
 function positionDot(progress) {
-  let x = 0, y = 0;
-  switch (phaseIdx) {
-    case PHASE_INHALE:     x = progress * SIDE; y = 0; break;
-    case PHASE_HOLD_FULL:  x = SIDE; y = progress * SIDE; break;
-    case PHASE_EXHALE:     x = SIDE - progress * SIDE; y = SIDE; break;
-    case PHASE_HOLD_EMPTY: x = 0; y = SIDE - progress * SIDE; break;
-  }
+  const [x, y] = PHASES[phaseIdx].dot(progress);
   dot.style.transform = `translate(${x}px, ${y}px)`;
 }
 
 function startPhase() {
   phaseStart = performance.now();
-  phaseEl.textContent = phases[phaseIdx];
-  const chimeFreqs = [659, 523, 392, 523];
-  playChime(chimeFreqs[phaseIdx]);
+  phaseEl.textContent = PHASES[phaseIdx].name;
+  playChime(PHASES[phaseIdx].chime);
   phaseEl.style.transition = 'none';
   phaseEl.style.opacity = '0.4';
   phaseEl.style.transform = 'scale(0.95)';
@@ -213,82 +269,99 @@ function startPhase() {
 }
 
 function updateRemaining(now) {
-  if (sessionMinutes === 0) {
-    remainingEl.textContent = `Elapsed ${formatMMSS(Math.ceil((now - sessionStart) / 1000))}`;
-    return;
+  const unlimited = sessionMinutes === 0;
+  const left = unlimited ? 0 : sessionMinutes * 60 * 1000 - (now - sessionStart);
+  const secs = unlimited ? Math.ceil((now - sessionStart) / 1000) : Math.ceil(left / 1000);
+  // Gate on the whole-second value: the rAF loop calls this ~60x/sec but the
+  // label only ticks once per second, so skip the formatMMSS/string build when
+  // the second hasn't changed.
+  if (secs !== lastRemainingSec) {
+    lastRemainingSec = secs;
+    remainingEl.textContent = unlimited ? `Elapsed ${formatMMSS(secs)}` : `${formatMMSS(secs)} remaining`;
   }
-  const totalMs = sessionMinutes * 60 * 1000;
-  const left = totalMs - (now - sessionStart);
-  remainingEl.textContent = `${formatMMSS(Math.ceil(left / 1000))} remaining`;
-  if (left <= 0 && !sessionEndChimePlayed) {
+  if (!unlimited && left <= 0 && !sessionEndChimePlayed) {
     sessionEndChimePlayed = true;
     playChime(523);
-    setTimeout(() => playChime(659), 350);
-    setTimeout(() => playChime(784), 700);
-    setTimeout(() => breathStop(true), 1400);
+    // Tracked so a Stop/Start within this 1.4s window can cancel them —
+    // otherwise stray chimes fire and breathStop(true) flips a fresh
+    // session's label to "Complete".
+    endChimeTimers.push(
+      setTimeout(() => playChime(659), 350),
+      setTimeout(() => playChime(784), 700),
+      setTimeout(() => breathStop(true), 1400),
+    );
   }
 }
 
 function loop(now) {
-  if (!running) return;
+  if (runState !== 'running') return;
   const elapsed = now - phaseStart;
   const progress = Math.min(elapsed / PHASE_MS, 1);
-  countEl.textContent = Math.max(1, Math.ceil((PHASE_MS - elapsed) / 1000));
+  const count = Math.max(1, Math.ceil((PHASE_MS - elapsed) / 1000));
+  if (count !== lastCount) { countEl.textContent = count; lastCount = count; }
   positionDot(progress);
-  setBreathSound(progress);
+  if (now - lastSoundUpdate >= SOUND_UPDATE_MS) { setBreathSound(progress); lastSoundUpdate = now; }
   updateRemaining(now);
-  if (elapsed >= PHASE_MS) { phaseIdx = (phaseIdx + 1) % 4; startPhase(); }
+  if (elapsed >= PHASE_MS) { phaseIdx = (phaseIdx + 1) % PHASES.length; startPhase(); }
   rafId = requestAnimationFrame(loop);
 }
 
 function breathStart() {
-  if (running) return;
-  running = true; paused = false; phaseIdx = 0;
+  if (runState !== 'idle') return;
+  runState = 'running'; phaseIdx = 0;
   sessionStart = performance.now();
   sessionEndChimePlayed = false;
+  clearEndChimeTimers();
+  lastCount = null; lastRemainingSec = null; lastSoundUpdate = -Infinity;
   ensureAudio(); startPhase();
+  requestWakeLock();
   rafId = requestAnimationFrame(loop);
   updateControls();
 }
 
 function breathPause() {
-  if (!running) return;
-  const now = performance.now();
-  pausedElapsed = now - phaseStart;
-  pausedSessionElapsed = now - sessionStart;
-  running = false; paused = true;
+  if (runState !== 'running') return;
+  pauseStartedAt = performance.now();
+  runState = 'paused';
   if (rafId) cancelAnimationFrame(rafId);
-  stopBreathAudio();
+  // Freeze the audio graph in place rather than tearing it down; resume()
+  // (via ensureAudio in breathResume) picks it back up without a rebuild.
+  if (audioCtx) audioCtx.suspend();
+  releaseWakeLock();
   phaseEl.textContent = 'Paused';
   updateControls();
 }
 
 function breathResume() {
-  if (!paused) return;
-  paused = false; running = true;
-  const now = performance.now();
-  phaseStart = now - pausedElapsed;
-  sessionStart = now - pausedSessionElapsed;
+  if (runState !== 'paused') return;
+  runState = 'running';
+  // A pause only freezes the clocks; advance both past the gap so elapsed
+  // time excludes it.
+  const gap = performance.now() - pauseStartedAt;
+  phaseStart += gap;
+  sessionStart += gap;
   ensureAudio();
-  phaseEl.textContent = phases[phaseIdx];
+  requestWakeLock();
+  phaseEl.textContent = PHASES[phaseIdx].name;
   rafId = requestAnimationFrame(loop);
   updateControls();
 }
 
 function stopBreathAudio() {
   if (!noiseSource) return;
-  // AudioBufferSourceNode.stop() throws InvalidStateError if already stopped — documented spec behavior; rethrow anything else.
+  // stop() throws InvalidStateError if the source was already stopped; rethrow anything else.
   try { noiseSource.stop(); } catch (e) { if (e.name !== "InvalidStateError") throw e; }
   noiseSource.disconnect(); noiseSource = null;
-  filterNode.disconnect();  filterNode = null;
-  filterNode2.disconnect(); filterNode2 = null;
-  gainNode.disconnect();    gainNode = null;
+  filterNodes.forEach(f => f.disconnect()); filterNodes = [];
+  gainNode.disconnect(); gainNode = null;
 }
 
 function breathStop(completed = false) {
-  running = false; paused = false;
+  runState = 'idle';
   if (rafId) cancelAnimationFrame(rafId);
+  clearEndChimeTimers();
   stopBreathAudio();
+  releaseWakeLock();
   // Close the AudioContext so it doesn't stay warm in background tabs.
   // ensureAudio() will rebuild on the next start.
   if (audioCtx) {
@@ -304,7 +377,7 @@ function breathStop(completed = false) {
 
 chips.forEach(chip => {
   chip.addEventListener('click', () => {
-    if (running || paused) return;
+    if (runState !== 'idle') return;
     chips.forEach(c => c.classList.remove('active'));
     chip.classList.add('active');
     sessionMinutes = parseInt(chip.dataset.minutes, 10);
@@ -317,17 +390,16 @@ resumeBtn.addEventListener('click', breathResume);
 stopBtn.addEventListener('click', () => breathStop(false));
 
 document.addEventListener('keydown', (e) => {
-  // Only handle shortcuts when breathe view is active
   if (!breatheView.classList.contains('active')) return;
   if (e.key === 'Enter') {
-    if (!running && !paused) breathStart();
-    else if (paused) breathResume();
+    if (runState === 'idle') breathStart();
+    else if (runState === 'paused') breathResume();
   } else if (e.key === 'Escape') {
-    if (running || paused) breathStop(false);
+    if (runState !== 'idle') breathStop(false);
   } else if (e.key === ' ') {
     e.preventDefault();
-    if (running) breathPause();
-    else if (paused) breathResume();
+    if (runState === 'running') breathPause();
+    else if (runState === 'paused') breathResume();
   }
 });
 
@@ -391,6 +463,7 @@ const cacheClearBtn = document.getElementById('cacheClear');
 
 let currentSession = null;
 let seeking = false;
+let loadToken = 0;
 
 function spinner(label) {
   const frag = document.createDocumentFragment();
@@ -402,11 +475,14 @@ function spinner(label) {
 }
 
 function setPlayIcon(playing) {
-  playBtn.innerHTML = playing ? '❚❚' : '▶';
+  playBtn.textContent = playing ? '❚❚' : '▶';
   playBtn.setAttribute('aria-label', playing ? 'Pause' : 'Play');
 }
 
 // --- Session list rendering ---
+// renderSessions does async cache I/O (offline checkmarks) and rebuilds the
+// list, so it runs only on cache-state changes. renderPlaying just moves the
+// `.playing` highlight and is synchronous — cheap enough for every click.
 async function renderSessions() {
   const cachedUrls = await getCachedUrls();
   sessionListEl.replaceChildren();
@@ -419,22 +495,28 @@ async function renderSessions() {
       el('div', { class: 'session-duration', text: s.duration }),
       cachedUrls.has(s.url) && el('span', { class: 'session-cached', title: 'Available offline', text: '✓' }),
     );
+    item.dataset.sessionId = s.id;
     item.addEventListener('click', () => playSession(s));
     sessionListEl.append(item);
+  }
+}
+
+function renderPlaying() {
+  for (const item of sessionListEl.children) {
+    item.classList.toggle('playing', item.dataset.sessionId === currentSession?.id);
   }
 }
 
 // --- Audio player ---
 function playSession(session) {
   currentSession = session;
-  audio.pause();
-  audio.removeAttribute('src');
-  audio.load();
+  const token = ++loadToken;
   audio.src = session.url;
   audio.play().catch((e) => {
-    // AbortError fires when src changes mid-play (rapid session switch) — expected.
-    // For anything else, surface to the user and log so the failure isn't silent.
-    if (e.name === "AbortError") return;
+    // A superseded load (rapid session switch) has already started a newer
+    // load — its rejection (AbortError, or anything else) is stale, ignore it.
+    // For a current load, surface and log so the failure isn't silent.
+    if (token !== loadToken || e.name === "AbortError") return;
     console.error("audio.play() rejected:", e);
     playerStatus.textContent = `Playback failed: ${e.message || e.name}`;
     playerStatus.className = "player-status error";
@@ -442,11 +524,8 @@ function playSession(session) {
   playerEl.classList.add('active');
   playerTitle.textContent = `${session.title} — ${session.source}`;
   playerStatus.replaceChildren(spinner('Loading'));
-  renderSessions();
+  renderPlaying();
   updateMediaSession(session);
-  // The SW's CacheFirst route caches the audio on first <audio src> fetch.
-  // We re-render on `canplaythrough` (below) so the offline checkmark appears
-  // once the cache write has likely landed.
 }
 
 playBtn.addEventListener('click', () => {
@@ -464,13 +543,23 @@ audio.addEventListener('timeupdate', () => {
   elapsedEl.textContent = formatMMSS(audio.currentTime);
 });
 
-audio.addEventListener('ended', () => { progressBar.value = 1000; });
+audio.addEventListener('ended', () => {
+  // timeupdate stops just shy of duration, so snap both the bar and the label
+  // to the end on natural completion.
+  progressBar.value = 1000;
+  elapsedEl.textContent = formatMMSS(audio.duration);
+});
 audio.addEventListener('pause', () => setPlayIcon(false));
 audio.addEventListener('play', () => setPlayIcon(true));
 audio.addEventListener('playing', () => { playerStatus.textContent = ''; });
 audio.addEventListener('waiting', () => { playerStatus.replaceChildren(spinner('Buffering')); playerStatus.className = 'player-status'; });
+// SW's CacheFirst route caches the audio on first fetch; re-render here so the
+// offline checkmark appears once canplaythrough implies the cache write landed.
 audio.addEventListener('canplaythrough', () => { renderSessions(); updateCacheSize(); });
 audio.addEventListener('error', () => {
+  // Ignore the abort fired when src changes mid-load (rapid session switch) —
+  // a newer load has already reset the status to Loading.
+  if (audio.error?.code === MediaError.MEDIA_ERR_ABORTED) return;
   playerStatus.textContent = 'Failed to load audio. The source may be unavailable.';
   playerStatus.className = 'player-status error';
 });
@@ -491,17 +580,27 @@ playerClose.addEventListener('click', () => {
   totalTimeEl.textContent = '0:00';
   playerStatus.textContent = '';
   playerStatus.className = 'player-status';
-  renderSessions();
+  renderPlaying();
   if ('mediaSession' in navigator) navigator.mediaSession.metadata = null;
 });
 
 // --- Media Session API (lock screen / background controls) ---
+// Clamp a target time into the seekable range; duration is NaN until metadata
+// loads, so fall back to an open upper bound.
+function clampTime(t) {
+  const upper = isFinite(audio.duration) ? audio.duration : Infinity;
+  return Math.min(upper, Math.max(0, t));
+}
 if ('mediaSession' in navigator) {
   navigator.mediaSession.setActionHandler('play', () => audio.play());
   navigator.mediaSession.setActionHandler('pause', () => audio.pause());
-  navigator.mediaSession.setActionHandler('seekbackward', () => { audio.currentTime = Math.max(0, audio.currentTime - 15); });
-  navigator.mediaSession.setActionHandler('seekforward', () => { audio.currentTime = Math.min(audio.duration || 0, audio.currentTime + 15); });
-  navigator.mediaSession.setActionHandler('seekto', (d) => { audio.currentTime = d.seekTime; });
+  navigator.mediaSession.setActionHandler('seekbackward', () => { audio.currentTime = clampTime(audio.currentTime - 15); });
+  navigator.mediaSession.setActionHandler('seekforward', () => { audio.currentTime = clampTime(audio.currentTime + 15); });
+  navigator.mediaSession.setActionHandler('seekto', (d) => {
+    const t = Number(d.seekTime);
+    if (!isFinite(t)) return;
+    audio.currentTime = clampTime(t);
+  });
   navigator.mediaSession.setActionHandler('stop', () => { playerClose.click(); });
 }
 
@@ -551,15 +650,14 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// --- Init guided view on first tab switch ---
+// --- Init guided view on first activation (click or keyboard) ---
 let guidedInitialized = false;
-document.querySelector('[data-tab="guided"]').addEventListener('click', () => {
-  if (!guidedInitialized) {
-    guidedInitialized = true;
-    renderSessions();
-    updateCacheSize();
-  }
-});
+function initGuidedOnce() {
+  if (guidedInitialized) return;
+  guidedInitialized = true;
+  renderSessions();
+  updateCacheSize();
+}
 
 // =============================================
 // Service worker
@@ -571,7 +669,7 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', async () => {
     const reg = await navigator.serviceWorker.register('./sw.js').catch(() => null);
     if (!reg) return;
-    const isIdle = () => audio.paused && !running && !paused;
+    const isIdle = () => audio.paused && runState === 'idle';
     const maybeSkip = () => {
       if (reg.waiting && isIdle()) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
     };
