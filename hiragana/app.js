@@ -106,6 +106,22 @@ const HAS_MNEMONIC = new Set([
   "わ", "を", "ん",
 ]);
 
+// Track the visual viewport height so the app can shrink into the space above
+// the on-screen keyboard. Without this the container stays full-height and the
+// browser scrolls the bottom-anchored input into view, hiding the card at top.
+function useViewportHeight() {
+  const [height, setHeight] = useState(() => window.visualViewport?.height ?? window.innerHeight);
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => setHeight(vv.height);
+    vv.addEventListener("resize", update);
+    update();
+    return () => vv.removeEventListener("resize", update);
+  }, []);
+  return height;
+}
+
 function loadInitialState() {
   const saved = loadStateFromStorage(localStorage, ROWS_BY_ID) || {};
   return {
@@ -129,6 +145,7 @@ export function App() {
   const [showSettings, setShowSettings] = useState(false);
   const inputRef = useRef(null);
   const jaVoiceRef = useRef(null);
+  const viewportHeight = useViewportHeight();
 
   useEffect(() => {
     function findJaVoice() {
@@ -289,9 +306,8 @@ export function App() {
   );
 
   return html`
-    <div class="w-full flex flex-col" style=${{
-      minHeight: "100svh",
-      height: "100svh",
+    <div class="w-full flex flex-col overflow-hidden" style=${{
+      height: `${viewportHeight}px`,
       background: "radial-gradient(ellipse at top, #f5efe2 0%, #ebe2cf 60%, #ddd0b3 100%)",
       fontFamily: "'EB Garamond', 'Hiragino Mincho ProN', 'Yu Mincho', serif",
     }}>
