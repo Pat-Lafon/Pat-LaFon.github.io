@@ -664,8 +664,18 @@ function initGuidedOnce() {
 // =============================================
 // Register the SW and only ask a waiting one to activate when the user is
 // not mid-session. "Safe" = audio paused AND no breathing loop active.
-// Reasserted on visibility hide and after every audio pause/end.
+// Reasserted on visibility hide and after every audio pause/end. Once the new
+// SW takes control we reload so the page runs the new assets instead of the old
+// ones still in memory; `hadController` skips that reload on the first-ever
+// install, whose clients.claim() also fires controllerchange.
 if ('serviceWorker' in navigator) {
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || reloading) return;
+    reloading = true;
+    window.location.reload();
+  });
   window.addEventListener('load', async () => {
     const reg = await navigator.serviceWorker.register('./sw.js').catch(() => null);
     if (!reg) return;
@@ -680,7 +690,10 @@ if ('serviceWorker' in navigator) {
       });
     });
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden') maybeSkip();
+      // Home-screen launches resume from a frozen snapshot without re-running
+      // load, so poll for a new SW whenever the app comes forward.
+      if (document.visibilityState === 'visible') reg.update();
+      else maybeSkip();
     });
     audio.addEventListener('pause', maybeSkip);
     audio.addEventListener('ended', maybeSkip);

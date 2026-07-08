@@ -23,24 +23,35 @@ const LOOKUP = {
   "あ": { kana: "あ", romaji: "a", rowId: "vowels", kind: "kana", prompt: null, alts: null },
 };
 
-// 1. Returning users with disk data from before the lean refactor must keep their progress.
-test("loadState migrates a pre-lean fat-shape localStorage", () => {
+// 1. Returning users on the current lean shape keep box + last-answered day.
+test("loadState reads the current {box, lastDay} shape", () => {
   const storage = makeStorage({
     [STORAGE_KEY]: JSON.stringify({
       enabledRows: ["vowels"],
-      cards: {
-        "あ": { id: "あ", kana: "あ", romaji: "a", rowId: "vowels", kind: "kana", prompt: null, alts: null, box: 4, lastReviewedAt: 20 },
-      },
+      cards: { "あ": { box: 4, lastDay: "2026-07-07" } },
+    }),
+  });
+  const loaded = loadState(storage, LOOKUP);
+  assert.equal(loaded.cards["あ"].box, 4);
+  assert.equal(loaded.cards["あ"].lastDay, "2026-07-07");
+  assert.equal(loaded.cards["あ"].romaji, "a"); // static field rehydrated from LOOKUP
+});
+
+// 2. Pre-daily review-count users keep their box; the day resets to null.
+test("loadState migrates pre-daily {box, lastReviewedAt}→{box, lastDay:null}", () => {
+  const storage = makeStorage({
+    [STORAGE_KEY]: JSON.stringify({
+      enabledRows: ["vowels"],
+      cards: { "あ": { box: 4, lastReviewedAt: 20 } },
       reviewCount: 100,
     }),
   });
   const loaded = loadState(storage, LOOKUP);
   assert.equal(loaded.cards["あ"].box, 4);
-  assert.equal(loaded.cards["あ"].lastReviewedAt, 20);
-  assert.equal(loaded.cards["あ"].romaji, "a"); // static field rehydrated from LOOKUP
+  assert.equal(loaded.cards["あ"].lastDay, null);
 });
 
-// 2. Even older users (pre-Leitner SM-2 shape) must not lose progress.
+// 3. Even older users (pre-Leitner SM-2 shape) must not lose progress.
 test("loadState migrates pre-Leitner SM-2 reps→box", () => {
   const storage = makeStorage({
     [STORAGE_KEY]: JSON.stringify({
@@ -49,7 +60,7 @@ test("loadState migrates pre-Leitner SM-2 reps→box", () => {
   });
   const loaded = loadState(storage, LOOKUP);
   assert.equal(loaded.cards["あ"].box, 4); // min(5, max(1, 3+1))
-  assert.equal(loaded.cards["あ"].lastReviewedAt, -1);
+  assert.equal(loaded.cards["あ"].lastDay, null);
 });
 
 console.log(`PASS: ${passed} storage tests`);

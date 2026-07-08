@@ -2,13 +2,15 @@
 
 import assert from "node:assert/strict";
 import {
-  BOX_CADENCE,
   MAX_BOX,
   LEARNED_BOX,
   applyGrade,
-  isCardDue,
+  isDoneToday,
   pickNext,
 } from "./srs.js";
+
+const TODAY = "2026-07-08";
+const YESTERDAY = "2026-07-07";
 
 let passed = 0;
 function test(name, fn) {
@@ -22,54 +24,68 @@ function test(name, fn) {
 }
 
 // Card factory for tests only — production cards are built via storage.hydrateCard.
-function card({ id, rowId = "vowels", box = 1, lastReviewedAt = -1 }) {
-  return { id, rowId, box, lastReviewedAt };
+function card({ id, rowId = "vowels", box = 1, lastDay = null }) {
+  return { id, rowId, box, lastDay };
 }
 
 // --- applyGrade ---
 test("applyGrade(0) resets to box 1", () => {
-  assert.equal(applyGrade(card({ id: "か", rowId: "k", box: 4, lastReviewedAt: 10 }), 0, 99).box, 1);
+  assert.equal(applyGrade(card({ id: "か", rowId: "k", box: 4, lastDay: YESTERDAY }), 0, TODAY).box, 1);
 });
 test("applyGrade(1) demotes one box, floored at 1", () => {
-  assert.equal(applyGrade({ box: 3, lastReviewedAt: 0 }, 1, 5).box, 2);
-  assert.equal(applyGrade({ box: 1, lastReviewedAt: 0 }, 1, 5).box, 1);
+  assert.equal(applyGrade({ box: 3 }, 1, TODAY).box, 2);
+  assert.equal(applyGrade({ box: 1 }, 1, TODAY).box, 1);
 });
 test("applyGrade(2) promotes one box, capped at MAX_BOX", () => {
-  assert.equal(applyGrade({ box: 2, lastReviewedAt: 0 }, 2, 5).box, 3);
-  assert.equal(applyGrade({ box: MAX_BOX, lastReviewedAt: 0 }, 2, 5).box, MAX_BOX);
+  assert.equal(applyGrade({ box: 2 }, 2, TODAY).box, 3);
+  assert.equal(applyGrade({ box: MAX_BOX }, 2, TODAY).box, MAX_BOX);
 });
 test("applyGrade(3) promotes two boxes, capped at MAX_BOX", () => {
-  assert.equal(applyGrade({ box: 2, lastReviewedAt: 0 }, 3, 5).box, 4);
-  assert.equal(applyGrade({ box: MAX_BOX - 1, lastReviewedAt: 0 }, 3, 5).box, MAX_BOX);
+  assert.equal(applyGrade({ box: 2 }, 3, TODAY).box, 4);
+  assert.equal(applyGrade({ box: MAX_BOX - 1 }, 3, TODAY).box, MAX_BOX);
 });
-test("applyGrade records reviewCount on lastReviewedAt", () => {
-  assert.equal(applyGrade({ box: 1, lastReviewedAt: -1 }, 2, 42).lastReviewedAt, 42);
+test("applyGrade stamps today on lastDay", () => {
+  assert.equal(applyGrade({ box: 1, lastDay: null }, 2, TODAY).lastDay, TODAY);
 });
 
-// --- isCardDue ---
-test("isCardDue: gap >= cadence is due", () => {
-  assert.equal(isCardDue({ box: 1, lastReviewedAt: 5 }, 6), true);
-  assert.equal(isCardDue({ box: 1, lastReviewedAt: 5 }, 5), false);
+// --- isDoneToday ---
+test("isDoneToday: learned tier reached today is done", () => {
+  assert.equal(isDoneToday(card({ id: "あ", box: LEARNED_BOX, lastDay: TODAY }), TODAY), true);
 });
-test("isCardDue: higher boxes need longer gaps", () => {
-  for (let box = 1; box <= MAX_BOX; box++) {
-    const cadence = BOX_CADENCE[box];
-    assert.equal(isCardDue({ box, lastReviewedAt: 0 }, cadence), true, `box ${box} at cadence`);
-    assert.equal(isCardDue({ box, lastReviewedAt: 0 }, cadence - 1), false, `box ${box} below cadence`);
-  }
+test("isDoneToday: learned on an earlier day owes a review today", () => {
+  assert.equal(isDoneToday(card({ id: "あ", box: 5, lastDay: YESTERDAY }), TODAY), false);
+});
+test("isDoneToday: below the learned tier is never done, even answered today", () => {
+  assert.equal(isDoneToday(card({ id: "あ", box: LEARNED_BOX - 1, lastDay: TODAY }), TODAY), false);
 });
 
 // --- pickNext ---
 test("pickNext returns null when no enabled cards exist", () => {
-  assert.equal(pickNext({ "あ": card({ id: "あ" }) }, 0, ["k"]), null);
-  assert.equal(pickNext({}, 0, ["vowels"]), null);
+  assert.equal(pickNext({ "あ": card({ id: "あ" }) }, TODAY, ["k"]), null);
+  assert.equal(pickNext({}, TODAY, ["vowels"]), null);
+});
+test("pickNext returns null once every enabled card is done today", () => {
+  const cards = {
+    "あ": card({ id: "あ", box: LEARNED_BOX, lastDay: TODAY }),
+    "い": card({ id: "い", box: 4, lastDay: TODAY }),
+  };
+  assert.equal(pickNext(cards, TODAY, ["vowels"]), null);
+});
+test("pickNext skips cards already done today", () => {
+  const cards = {
+    "あ": card({ id: "あ", box: LEARNED_BOX, lastDay: TODAY }), // done
+    "い": card({ id: "い", box: 1, lastDay: null }),            // pending
+  };
+  for (let i = 0; i < 20; i++) {
+    assert.equal(pickNext(cards, TODAY, ["vowels"]).id, "い");
+  }
 });
 test("pickNext respects enabledRows filter", () => {
   const cards = {
     "あ": card({ id: "あ", rowId: "vowels" }),
     "か": card({ id: "か", rowId: "k" }),
   };
-  assert.equal(pickNext(cards, 5, ["k"]).rowId, "k");
+  assert.equal(pickNext(cards, TODAY, ["k"]).rowId, "k");
 });
 test("pickNext excludes the previous id when pool > 1", () => {
   const cards = {
@@ -77,31 +93,20 @@ test("pickNext excludes the previous id when pool > 1", () => {
     "い": card({ id: "い" }),
   };
   for (let i = 0; i < 20; i++) {
-    assert.notEqual(pickNext(cards, 5, ["vowels"], "あ").id, "あ");
+    assert.notEqual(pickNext(cards, TODAY, ["vowels"], "あ").id, "あ");
   }
 });
-test("pickNext returns the only card when pool == 1, even if excluded", () => {
+test("pickNext returns the only pending card when pool == 1, even if excluded", () => {
   const cards = { "あ": card({ id: "あ" }) };
-  assert.equal(pickNext(cards, 5, ["vowels"], "あ").id, "あ");
+  assert.equal(pickNext(cards, TODAY, ["vowels"], "あ").id, "あ");
 });
-test("pickNext excludes by id for non-kana (number) cards", () => {
+test("pickNext prefers the lowest box (least-known / just-flubbed) first", () => {
   const cards = {
-    "num-1": card({ id: "num-1", rowId: "num-1-10" }),
-    "num-2": card({ id: "num-2", rowId: "num-1-10" }),
+    "あ": card({ id: "あ", box: 1 }),
+    "い": card({ id: "い", box: 2 }),
   };
   for (let i = 0; i < 20; i++) {
-    assert.notEqual(pickNext(cards, 5, ["num-1-10"], "num-1").id, "num-1");
-  }
-});
-test("pickNext prefers due cards over non-due", () => {
-  // box-1 card seen at review 0; at reviewCount=5 it's due. box-5 card seen
-  // at review 0; at reviewCount=5 it's NOT due (cadence 16).
-  const cards = {
-    "あ": card({ id: "あ", box: 1, lastReviewedAt: 0 }),
-    "い": card({ id: "い", box: 5, lastReviewedAt: 0 }),
-  };
-  for (let i = 0; i < 20; i++) {
-    assert.equal(pickNext(cards, 5, ["vowels"]).id, "あ");
+    assert.equal(pickNext(cards, TODAY, ["vowels"]).id, "あ");
   }
 });
 

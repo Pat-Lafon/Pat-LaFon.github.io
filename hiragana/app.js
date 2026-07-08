@@ -3,7 +3,7 @@ import htm from "./vendor/htm.js";
 import {
   LEARNED_BOX,
   applyGrade,
-  isCardDue,
+  isDoneToday,
   pickNext as pickNextPure,
 } from "./srs.js";
 import { numberEntry, composeNumber } from "./numbers.js";
@@ -113,15 +113,14 @@ function loadInitialState() {
       ? saved.enabledRows
       : DEFAULT_ENABLED,
     cards: saved.cards ?? {},
-    reviewCount: typeof saved.reviewCount === "number" ? saved.reviewCount : 0,
   };
 }
 
 export function App() {
   const [initial] = useState(loadInitialState);
+  const [today] = useState(todayKey);
   const [enabledRows, setEnabledRows] = useState(initial.enabledRows);
   const [cards, setCards] = useState(initial.cards);
-  const [reviewCount, setReviewCount] = useState(initial.reviewCount);
   const [current, setCurrent] = useState(null);
   const [revealed, setRevealed] = useState(false);
   const [input, setInput] = useState("");
@@ -143,8 +142,8 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    saveStateToStorage(localStorage, { enabledRows, cards, reviewCount });
-  }, [enabledRows, cards, reviewCount]);
+    saveStateToStorage(localStorage, { enabledRows, cards });
+  }, [enabledRows, cards]);
 
   useEffect(() => {
     saveStatsToStorage(localStorage, stats);
@@ -154,7 +153,7 @@ export function App() {
     setCards((prev) => {
       const next = { ...prev };
       let changed = false;
-      const freshLean = { box: 1, lastReviewedAt: -1 };
+      const freshLean = { box: 1, lastDay: null };
       const enabled = new Set(enabledRows);
       for (const [id, fields] of Object.entries(ROWS_BY_ID)) {
         if (!enabled.has(fields.rowId) || next[id]) continue;
@@ -165,8 +164,8 @@ export function App() {
     });
   }, [enabledRows]);
 
-  const pickNext = (cardMap = cards, count = reviewCount, exclude = current?.id) =>
-    pickNextPure(cardMap, count, enabledRows, exclude);
+  const pickNext = (cardMap = cards, exclude = current?.id) =>
+    pickNextPure(cardMap, today, enabledRows, exclude);
 
   const audioPool = useRef(new Map());
   function speak(card) {
@@ -215,20 +214,17 @@ export function App() {
     setStats((s) => ({ ...s, reviewed: s.reviewed + 1, correct: s.correct + (correct ? 1 : 0) }));
     speak(current);
     if (!correct) {
-      const updated = applyGrade(current, 0, reviewCount);
+      const updated = applyGrade(current, 0, today);
       setCards((prev) => ({ ...prev, [current.id]: updated }));
-      setReviewCount((n) => n + 1);
     }
   }
 
   function grade(quality, card = current) {
     if (!card) return;
-    const updated = applyGrade(card, quality, reviewCount);
-    const nextCount = reviewCount + 1;
+    const updated = applyGrade(card, quality, today);
     const newCards = { ...cards, [card.id]: updated };
     setCards((prev) => ({ ...prev, [card.id]: updated }));
-    setCurrent(pickNext(newCards, nextCount));
-    setReviewCount(nextCount);
+    setCurrent(pickNext(newCards));
     setRevealed(false);
     setFeedback(null);
     setInput("");
@@ -243,9 +239,9 @@ export function App() {
 
   useEffect(() => {
     if (current) return;
-    const next = pickNextPure(cards, reviewCount, enabledRows, undefined);
+    const next = pickNextPure(cards, today, enabledRows, undefined);
     if (next) setCurrent(next);
-  }, [current, cards, reviewCount, enabledRows]);
+  }, [current, cards, today, enabledRows]);
 
   // Keep a ref pointing at the latest nextCard closure so the keydown handler
   // can call it without re-binding on every state change (and without the
@@ -271,7 +267,6 @@ export function App() {
   function resetProgress() {
     if (!confirm("Reset all SRS progress? Your enabled rows will stay the same.")) return;
     setCards({});
-    setReviewCount(0);
     setCurrent(null);
   }
 
@@ -279,9 +274,10 @@ export function App() {
     () => Object.values(cards).filter(c => enabledRows.includes(c.rowId)),
     [cards, enabledRows],
   );
-  const dueCount = useMemo(
-    () => enabledCards.filter(c => isCardDue(c, reviewCount)).length,
-    [enabledCards, reviewCount],
+  // pickNext never re-serves a done card, so this count only falls — safe as a countdown.
+  const remaining = useMemo(
+    () => enabledCards.filter(c => !isDoneToday(c, today)).length,
+    [enabledCards, today],
   );
   const learnedCount = useMemo(
     () => enabledCards.filter(c => c.box >= LEARNED_BOX).length,
@@ -323,7 +319,8 @@ export function App() {
                 toggleRow=${toggleRow}
                 cards=${cards}
                 onReset=${resetProgress}
-                reviewCount=${reviewCount}
+                learnedCount=${learnedCount}
+                totalCount=${enabledCards.length}
               />
             </div>`
           : html`<${PracticeView}
@@ -337,10 +334,11 @@ export function App() {
               nextCard=${nextCard}
               speak=${speak}
               inputRef=${inputRef}
-              dueCount=${dueCount}
+              remaining=${remaining}
               learnedCount=${learnedCount}
               totalCount=${enabledCards.length}
               accuracy=${accuracy}
+              stats=${stats}
             />`
         }
       </div>
@@ -348,7 +346,7 @@ export function App() {
   `;
 }
 
-function PracticeView({ current, input, setInput, revealed, feedback, handleSubmit, grade, nextCard, speak, inputRef, dueCount, learnedCount, totalCount, accuracy }) {
+function PracticeView({ current, input, setInput, revealed, feedback, handleSubmit, grade, nextCard, speak, inputRef, remaining, learnedCount, totalCount, accuracy, stats }) {
   const [mnemonicFailed, setMnemonicFailed] = useState(false);
 
   useEffect(() => {
@@ -357,11 +355,14 @@ function PracticeView({ current, input, setInput, revealed, feedback, handleSubm
   }, [current?.id, revealed, inputRef]);
 
   if (!current) {
-    return html`
-      <div class="text-center py-20 flex-1 flex items-center justify-center">
-        <div class="text-stone-700 text-lg italic">No characters enabled. Tap "Rows" to begin.</div>
-      </div>
-    `;
+    if (totalCount === 0) {
+      return html`
+        <div class="text-center py-20 flex-1 flex items-center justify-center">
+          <div class="text-stone-700 text-lg italic">No characters enabled. Tap "Rows" to begin.</div>
+        </div>
+      `;
+    }
+    return html`<${DoneView} reviewed=${stats.reviewed} accuracy=${accuracy} learnedCount=${learnedCount} totalCount=${totalCount} />`;
   }
 
   const accent = "#9c2a1f";
@@ -371,8 +372,7 @@ function PracticeView({ current, input, setInput, revealed, feedback, handleSubm
   return html`
     <div class="flex-1 flex flex-col min-h-0">
       <div class="flex justify-between items-center text-[9px] tracking-[0.2em] uppercase text-stone-500 mb-2 flex-shrink-0">
-        <span>Due <span class="text-stone-800 font-medium">${dueCount}</span></span>
-        <span>Learned <span class="text-stone-800 font-medium">${learnedCount}</span>/${totalCount}</span>
+        <span><span class="text-stone-800 font-medium">${remaining}</span> to go</span>
         <span>${accuracy !== null
           ? html`Acc <span class="text-stone-800 font-medium">${accuracy}%</span>`
           : html`<span class="opacity-50">Acc —</span>`}</span>
@@ -496,6 +496,39 @@ function PracticeView({ current, input, setInput, revealed, feedback, handleSubm
   `;
 }
 
+function DoneView({ reviewed, accuracy, learnedCount, totalCount }) {
+  return html`
+    <div class="flex-1 flex flex-col items-center justify-center text-center px-6" style=${{ animation: "fadeIn 0.4s ease-out" }}>
+      <div class="text-stone-900 leading-none mb-6" style=${{
+        fontFamily: "'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', serif",
+        fontSize: "min(20vh, 30vw)",
+      }}>済</div>
+      <div class="text-[10px] tracking-[0.3em] uppercase text-stone-500 mb-2">Caught up for today</div>
+      <div class="text-stone-700 text-lg italic mb-8">Come back tomorrow.</div>
+      <div class="flex items-stretch divide-x divide-stone-300 text-center">
+        <div class="px-5">
+          <div class="text-2xl text-stone-900" style=${{ fontWeight: 500 }}>${reviewed}</div>
+          <div class="text-[9px] tracking-[0.2em] uppercase text-stone-500 mt-1">Reviewed</div>
+        </div>
+        <div class="px-5">
+          <div class="text-2xl text-stone-900" style=${{ fontWeight: 500 }}>${accuracy !== null ? `${accuracy}%` : "—"}</div>
+          <div class="text-[9px] tracking-[0.2em] uppercase text-stone-500 mt-1">Accuracy</div>
+        </div>
+        <div class="px-5">
+          <div class="text-2xl text-stone-900" style=${{ fontWeight: 500 }}>${learnedCount}<span class="text-stone-400 text-lg">/${totalCount}</span></div>
+          <div class="text-[9px] tracking-[0.2em] uppercase text-stone-500 mt-1">Learned</div>
+        </div>
+      </div>
+      <style>${`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(4px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+    </div>
+  `;
+}
+
 function GradeButton({ label, sub, onClick, color }) {
   return html`
     <button
@@ -525,11 +558,16 @@ function rowPreview(row) {
   return row.entries.map(e => e.prompt ?? e.kana).join(" ");
 }
 
-function SettingsView({ enabledRows, toggleRow, cards, onReset, reviewCount }) {
+function SettingsView({ enabledRows, toggleRow, cards, onReset, learnedCount, totalCount }) {
   return html`
     <div>
-      <div class="text-[10px] tracking-[0.3em] uppercase text-stone-500 mb-4">
-        Toggle rows to add to your practice
+      <div class="flex items-baseline justify-between mb-4">
+        <div class="text-[10px] tracking-[0.3em] uppercase text-stone-500">
+          Toggle rows to add to your practice
+        </div>
+        <div class="text-[10px] tracking-[0.2em] uppercase text-stone-500">
+          <span class="text-stone-800 font-medium">${learnedCount}</span>/${totalCount} learned
+        </div>
       </div>
       ${SECTIONS.map(section => html`
         <div key=${section.name} class="mb-6">
@@ -542,7 +580,6 @@ function SettingsView({ enabledRows, toggleRow, cards, onReset, reviewCount }) {
               const total = row.entries.length;
               const rowCards = row.entries.map(e => cards[e.id]).filter(Boolean);
               const learned = rowCards.filter(c => c.box >= LEARNED_BOX).length;
-              const due = rowCards.filter(c => isCardDue(c, reviewCount)).length;
               return html`
                 <button
                   key=${row.id}
@@ -567,7 +604,6 @@ function SettingsView({ enabledRows, toggleRow, cards, onReset, reviewCount }) {
                   ${enabled && html`
                     <div class="text-right text-[10px] tracking-widest uppercase text-stone-500">
                       <div>${learned}/${total} learned</div>
-                      ${due > 0 && html`<div class="mt-0.5" style=${{ color: "#9c2a1f" }}>${due} due</div>`}
                     </div>
                   `}
                 </button>

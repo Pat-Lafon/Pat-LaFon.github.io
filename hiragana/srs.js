@@ -1,24 +1,22 @@
-// Pure SRS logic for the hiragana app. No DOM, React, or localStorage —
-// callable from both the React component and Node tests.
+// Pure SRS logic — no DOM/React/storage, so it runs in Node tests.
 //
-// Leitner box cadences: a card in box B is due every BOX_CADENCE[B] reviews.
-// Box 5 is "mastered" — surfaces only every 16 reviews.
-export const BOX_CADENCE = [0, 1, 2, 4, 8, 16];
+// Pure-daily model: the box tracks mastery but no longer schedules across days;
+// a card is due every day until answered up into the learned tier.
 export const MAX_BOX = 5;
 export const LEARNED_BOX = 3;
 
-// quality: 0=forgot, 1=slow, 2=recalled, 3=instant
-export function applyGrade(card, quality, reviewCount) {
+// quality: 0=forgot, 1=slow, 2=recalled, 3=instant.
+export function applyGrade(card, quality, today) {
   let box = card.box;
   if (quality === 0) box = 1;
   else if (quality === 1) box = Math.max(1, box - 1);
   else if (quality === 2) box = Math.min(MAX_BOX, box + 1);
   else if (quality === 3) box = Math.min(MAX_BOX, box + 2);
-  return { ...card, box, lastReviewedAt: reviewCount };
+  return { ...card, box, lastDay: today };
 }
 
-export function isCardDue(card, reviewCount) {
-  return (reviewCount - card.lastReviewedAt) >= BOX_CADENCE[card.box];
+export function isDoneToday(card, today) {
+  return card.box >= LEARNED_BOX && card.lastDay === today;
 }
 
 function shuffle(arr) {
@@ -30,22 +28,15 @@ function shuffle(arr) {
   return a;
 }
 
-// Selects the next card to review from `cardMap`, considering only cards whose
-// `rowId` is in `enabledRows`. Optionally excludes a card id (to avoid immediate
-// repeats). Strategy: due cards first; among them most-overdue; among those
-// lowest box; random within the resulting tier.
-export function pickNext(cardMap, reviewCount, enabledRows, excludeId) {
+// Lowest box first, so the least-known — and anything just flubbed to box 1 —
+// resurface soonest. Null when nothing is left to do today.
+export function pickNext(cardMap, today, enabledRows, excludeId) {
   const enabled = new Set(enabledRows);
-  const all = Object.values(cardMap).filter(c => enabled.has(c.rowId));
-  const pool = all.length > 1 ? all.filter(c => c.id !== excludeId) : all;
-  if (pool.length === 0) return null;
-  const due = pool.filter(c => isCardDue(c, reviewCount));
-  const candidates = due.length ? due : pool;
-  const dueAt = (c) => c.lastReviewedAt + BOX_CADENCE[c.box];
-  const minDueAt = Math.min(...candidates.map(dueAt));
-  const mostOverdue = candidates.filter(c => dueAt(c) === minDueAt);
-  const minBox = Math.min(...mostOverdue.map(c => c.box));
-  const tier = mostOverdue.filter(c => c.box === minBox);
+  const pending = Object.values(cardMap)
+    .filter(c => enabled.has(c.rowId) && !isDoneToday(c, today));
+  if (pending.length === 0) return null;
+  const pool = pending.length > 1 ? pending.filter(c => c.id !== excludeId) : pending;
+  const minBox = Math.min(...pool.map(c => c.box));
+  const tier = pool.filter(c => c.box === minBox);
   return shuffle(tier)[0];
 }
-
