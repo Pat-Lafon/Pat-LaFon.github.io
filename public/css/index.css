@@ -100,10 +100,16 @@ iframe {
 	aspect-ratio: 16/9;
 }
 
-.profile-photo {
+/* Float the <picture> the image transform wraps around this <img>, not the
+   <img> itself: WebKit ignores a float on an <img> inside <picture> and runs
+   the surrounding text straight over the photo. */
+picture:has(> .profile-photo) {
 	float: right;
 	width: 50%;
 	margin: 0 0 1rem 1rem;
+}
+.profile-photo {
+	width: 100%;
 }
 
 p:last-child {
@@ -290,4 +296,3 @@ header {
 .post-metadata time {
 	margin-right: 1em;
 }
-

@@ -355,6 +355,7 @@ export function App() {
               totalCount=${enabledCards.length}
               accuracy=${accuracy}
               stats=${stats}
+              viewportHeight=${viewportHeight}
             />`
         }
       </div>
@@ -362,7 +363,7 @@ export function App() {
   `;
 }
 
-function PracticeView({ current, input, setInput, revealed, feedback, handleSubmit, grade, nextCard, speak, inputRef, remaining, learnedCount, totalCount, accuracy, stats }) {
+function PracticeView({ current, input, setInput, revealed, feedback, handleSubmit, grade, nextCard, speak, inputRef, remaining, learnedCount, totalCount, accuracy, stats, viewportHeight }) {
   const [mnemonicFailed, setMnemonicFailed] = useState(false);
 
   useEffect(() => {
@@ -411,7 +412,7 @@ function PracticeView({ current, input, setInput, revealed, feedback, handleSubm
             style=${{
               fontFamily: "'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', serif",
               fontWeight: 400,
-              fontSize: revealed ? "min(36vh, 55vw)" : "min(30vh, 52vw)",
+              fontSize: revealed ? "min(36vh, 55vw)" : `min(${Math.round(viewportHeight * 0.3)}px, 52vw)`,
               animation: "fadeIn 0.4s ease-out",
               cursor: revealed ? "pointer" : "default",
               transition: "font-size 0.25s ease",
