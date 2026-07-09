@@ -106,20 +106,32 @@ const HAS_MNEMONIC = new Set([
   "わ", "を", "ん",
 ]);
 
-// Track the visual viewport height so the app can shrink into the space above
-// the on-screen keyboard. Without this the container stays full-height and the
-// browser scrolls the bottom-anchored input into view, hiding the card at top.
-function useViewportHeight() {
-  const [height, setHeight] = useState(() => window.visualViewport?.height ?? window.innerHeight);
+// Pin the app to the region the on-screen keyboard leaves visible. `height`
+// shrinks the container into that region; `offsetTop` follows the pan iOS does
+// when it focuses the bottom-anchored input — the body can't scroll (no
+// overflow), so instead of scrolling the document iOS slides the whole visual
+// viewport down, and without compensating for that slide the card above the
+// input runs off the top of the screen. iOS reports the pan as a visualViewport
+// `scroll` (not `resize`), so both events are needed to stay glued to the
+// visible rectangle through the keyboard animation.
+function useViewport() {
+  const [viewport, setViewport] = useState(() => ({
+    height: window.visualViewport?.height ?? window.innerHeight,
+    offsetTop: window.visualViewport?.offsetTop ?? 0,
+  }));
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
-    const update = () => setHeight(vv.height);
+    const update = () => setViewport({ height: vv.height, offsetTop: vv.offsetTop });
     vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
     update();
-    return () => vv.removeEventListener("resize", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
   }, []);
-  return height;
+  return viewport;
 }
 
 function loadInitialState() {
@@ -145,7 +157,8 @@ export function App() {
   const [showSettings, setShowSettings] = useState(false);
   const inputRef = useRef(null);
   const jaVoiceRef = useRef(null);
-  const viewportHeight = useViewportHeight();
+  const viewport = useViewport();
+  const viewportHeight = viewport.height;
 
   useEffect(() => {
     function findJaVoice() {
@@ -308,6 +321,8 @@ export function App() {
   return html`
     <div class="w-full flex flex-col overflow-hidden" style=${{
       height: `${viewportHeight}px`,
+      transform: `translateY(${viewport.offsetTop}px)`,
+      willChange: "transform",
       background: "radial-gradient(ellipse at top, #f5efe2 0%, #ebe2cf 60%, #ddd0b3 100%)",
       fontFamily: "'EB Garamond', 'Hiragino Mincho ProN', 'Yu Mincho', serif",
     }}>
