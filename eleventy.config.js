@@ -30,8 +30,6 @@ export default async function(eleventyConfig) {
 		}
 	});
 
-	// Copy the contents of the `public` folder to the output folder
-	// For example, `./public/css/` ends up in `_site/css/`
 	eleventyConfig
 		.addPassthroughCopy({
 			"./public/": "/"
@@ -43,10 +41,6 @@ export default async function(eleventyConfig) {
 		.addPassthroughCopy("./hiragana",   { filter: pwaPassthroughFilter })
 		.addPassthroughCopy("./meditation", { filter: pwaPassthroughFilter });
 
-	// Run Eleventy when these files change:
-	// https://www.11ty.dev/docs/watch-serve/#add-your-own-watch-targets
-
-	// Watch images for the image pipeline.
 	eleventyConfig.addWatchTarget("content/**/*.{svg,webp,png,jpg,jpeg,gif}");
 
 	// Per-page bundles, see https://github.com/11ty/eleventy-plugin-bundle
@@ -59,7 +53,6 @@ export default async function(eleventyConfig) {
 		toFileDirectory: "dist",
 	});
 
-	// Official plugins
 	eleventyConfig.addPlugin(pluginSyntaxHighlight, {
 		preAttributes: { tabindex: 0 }
 	});
@@ -94,10 +87,7 @@ export default async function(eleventyConfig) {
 
 	// Image optimization: https://www.11ty.dev/docs/plugins/image/#eleventy-transform
 	eleventyConfig.addPlugin(eleventyImageTransformPlugin, {
-		// Output formats for each image.
 		formats: ["avif", "webp", "auto"],
-
-		// widths: ["auto"],
 
 		failOnError: true,
 		htmlOptions: {

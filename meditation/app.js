@@ -1,7 +1,5 @@
 (function () {
-// =============================================
 // Shared helpers
-// =============================================
 const breatheView = document.getElementById('breathe-view');
 const guidedView = document.getElementById('guided-view');
 
@@ -23,9 +21,7 @@ function el(tag, props = {}, ...children) {
   return node;
 }
 
-// =============================================
 // Tab navigation
-// =============================================
 const tabBtns = Array.from(document.querySelectorAll('.tab-btn'));
 const views = document.querySelectorAll('.view');
 
@@ -38,8 +34,7 @@ function activateTab(btn) {
   });
   views.forEach(v => v.classList.remove('active'));
   document.getElementById(btn.dataset.tab + '-view').classList.add('active');
-  // Lives here (not the click handler) so keyboard arrow-nav to the tab,
-  // which calls activateTab directly, also initializes the guided view.
+  // Here, not the click handler, so keyboard arrow-nav also inits the guided view.
   if (btn.dataset.tab === 'guided') initGuidedOnce();
 }
 
@@ -60,9 +55,7 @@ tabBtns.forEach((btn, i) => {
   });
 });
 
-// =============================================
 // Breathe view (box breathing)
-// =============================================
 const dot = document.getElementById('dot');
 const phaseEl = document.getElementById('phase');
 const countEl = document.getElementById('count');
@@ -77,8 +70,7 @@ let sessionMinutes = 5;
 let sessionStart = 0;
 let sessionEndChimePlayed = false;
 let endChimeTimers = [];
-// The rAF loop runs ~60fps but these only change ~1/sec (text) or smooth over
-// 0.1s (audio params), so we gate writes to avoid redundant work each frame.
+// Gate writes in the rAF loop — these change ~1/sec, not every frame.
 let lastCount = null;
 let lastRemainingSec = null;
 let lastSoundUpdate = -Infinity;
@@ -97,10 +89,9 @@ const FILTER_HIGH = 700;
 const MAX_GAIN = 0.55;
 const CHIME_DURATION = 0.6;
 
-// Box-breathing phases in order, indexed by phaseIdx. Each phase's full
-// behavior lives in one row: dot(progress)→[x,y] traces the square's perimeter,
-// sound(progress)→[cutoff, gain] drives the noise filter. Adding or retuning a
-// phase touches a single row instead of four parallel tables/switches.
+// Box-breathing phases in order, indexed by phaseIdx. Per row:
+// dot(progress)→[x,y] traces the square's perimeter, sound(progress)→[cutoff,
+// gain] drives the noise filter.
 const PHASES = [
   { name: 'Inhale', chime: 659,
     dot:   p => [p * SIDE, 0],
@@ -127,20 +118,15 @@ let filterNodes = [];
 let gainNode = null;
 let wakeLock = null;
 
-// Keep the screen awake during an active breathing session so the phone
-// doesn't lock/dim (which would suspend rAF and the audio). The browser
-// auto-releases the lock when the page is hidden — and we auto-pause then
-// anyway (visibilitychange handler below), so there's no hidden-but-running
-// state left to re-acquire for.
+// Keep the screen awake during a session so the phone doesn't lock/dim, which
+// would suspend rAF and the audio.
 async function requestWakeLock() {
-  // `wakeLock` doubles as an in-flight guard: a pending sentinel blocks a
-  // second concurrent request (which would leak the first lock), and the
-  // post-await `runState` re-check releases immediately if the session ended
-  // mid-acquire (e.g. Start then quick Pause) — otherwise that lock leaks.
+  // `wakeLock` doubles as an in-flight guard: the 'pending' sentinel blocks a
+  // concurrent request that would leak the first lock, and the post-await
+  // runState re-check releases the lock if the session ended mid-acquire.
   if (!('wakeLock' in navigator) || wakeLock) return;
   wakeLock = 'pending';
-  // request() rejects if the document isn't visible or the OS denies it
-  // (low battery, etc.) — a failed lock is non-fatal, so swallow it.
+  // request() rejects if the document is hidden or the OS denies it — non-fatal.
   let lock = null;
   try { lock = await navigator.wakeLock.request('screen'); }
   catch { /* non-fatal */ }
@@ -150,16 +136,15 @@ async function requestWakeLock() {
 
 function releaseWakeLock() {
   if (!wakeLock) return;
-  // May be the 'pending' sentinel if an acquire is still in flight; the
-  // post-await `runState` check in requestWakeLock releases that one.
+  // 'pending' sentinel (acquire in flight) is released by requestWakeLock's
+  // post-await check, not here.
   if (typeof wakeLock !== 'string') wakeLock.release().catch(() => {});
   wakeLock = null;
 }
 
 document.addEventListener('visibilitychange', () => {
-  // Auto-pause a hidden running session: rAF freezes while hidden but the
-  // AudioContext keeps running, so on return the phase clock jumps forward and
-  // the skipped phases' chimes fire in a burst. Pausing freezes both cleanly.
+  // rAF freezes while hidden but the AudioContext keeps running; on return the
+  // phase clock jumps and skipped chimes fire in a burst. Pause freezes both.
   if (document.visibilityState === 'hidden' && runState === 'running') breathPause();
 });
 
@@ -194,17 +179,15 @@ function ensureAudio() {
     if (!Ctx) return;
     audioCtx = new Ctx();
   }
-  // Resume unconditionally rather than gating on state === 'suspended': after a
-  // breathPause→breathResume, the suspend() may not have settled yet (state
-  // still reads 'running'), so a gated resume would skip and the context would
-  // settle suspended mid-session. The control-message queue runs suspend then
-  // resume in call order, so an unconditional resume always lands on 'running'.
+  // Resume unconditionally, not gated on state==='suspended': after
+  // pause→resume the suspend() may not have settled, so a gated resume would
+  // skip and leave the context suspended. Control messages run in call order,
+  // so an unconditional resume always wins.
   audioCtx.resume();
   if (!noiseSource) {
     gainNode = audioCtx.createGain();
     gainNode.gain.value = 0.0001;
-    // Two-pole lowpass cascade for a steeper rolloff; both poles track the same
-    // cutoff in lockstep (setBreathSound).
+    // Two-pole lowpass cascade for a steeper rolloff.
     filterNodes = [0, 1].map(() => {
       const f = audioCtx.createBiquadFilter();
       f.type = 'lowpass';
@@ -272,9 +255,8 @@ function updateRemaining(now) {
   const unlimited = sessionMinutes === 0;
   const left = unlimited ? 0 : sessionMinutes * 60 * 1000 - (now - sessionStart);
   const secs = unlimited ? Math.ceil((now - sessionStart) / 1000) : Math.ceil(left / 1000);
-  // Gate on the whole-second value: the rAF loop calls this ~60x/sec but the
-  // label only ticks once per second, so skip the formatMMSS/string build when
-  // the second hasn't changed.
+  // Only the whole-second value drives the label, so skip the formatMMSS/string
+  // build until the second changes.
   if (secs !== lastRemainingSec) {
     lastRemainingSec = secs;
     remainingEl.textContent = unlimited ? `Elapsed ${formatMMSS(secs)}` : `${formatMMSS(secs)} remaining`;
@@ -282,9 +264,8 @@ function updateRemaining(now) {
   if (!unlimited && left <= 0 && !sessionEndChimePlayed) {
     sessionEndChimePlayed = true;
     playChime(523);
-    // Tracked so a Stop/Start within this 1.4s window can cancel them —
-    // otherwise stray chimes fire and breathStop(true) flips a fresh
-    // session's label to "Complete".
+    // Tracked so a Stop/Start within this 1.4s window cancels them — else stray
+    // chimes fire and breathStop(true) marks a fresh session "Complete".
     endChimeTimers.push(
       setTimeout(() => playChime(659), 350),
       setTimeout(() => playChime(784), 700),
@@ -324,8 +305,7 @@ function breathPause() {
   pauseStartedAt = performance.now();
   runState = 'paused';
   if (rafId) cancelAnimationFrame(rafId);
-  // Freeze the audio graph in place rather than tearing it down; resume()
-  // (via ensureAudio in breathResume) picks it back up without a rebuild.
+  // Freeze the audio graph rather than tear it down; breathResume resumes it.
   if (audioCtx) audioCtx.suspend();
   releaseWakeLock();
   phaseEl.textContent = 'Paused';
@@ -335,8 +315,7 @@ function breathPause() {
 function breathResume() {
   if (runState !== 'paused') return;
   runState = 'running';
-  // A pause only freezes the clocks; advance both past the gap so elapsed
-  // time excludes it.
+  // Advance both clocks past the pause gap so elapsed time excludes it.
   const gap = performance.now() - pauseStartedAt;
   phaseStart += gap;
   sessionStart += gap;
@@ -363,7 +342,6 @@ function breathStop(completed = false) {
   stopBreathAudio();
   releaseWakeLock();
   // Close the AudioContext so it doesn't stay warm in background tabs.
-  // ensureAudio() will rebuild on the next start.
   if (audioCtx) {
     audioCtx.close().catch(() => {});
     audioCtx = null;
@@ -403,9 +381,7 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// =============================================
 // Guided view — session data, player, caching
-// =============================================
 const AUDIO_CACHE = 'meditation-audio';
 
 const SESSIONS = [
@@ -480,9 +456,8 @@ function setPlayIcon(playing) {
 }
 
 // --- Session list rendering ---
-// renderSessions does async cache I/O (offline checkmarks) and rebuilds the
-// list, so it runs only on cache-state changes. renderPlaying just moves the
-// `.playing` highlight and is synchronous — cheap enough for every click.
+// renderSessions does async cache I/O and rebuilds the list (on cache-state
+// changes only); renderPlaying just moves the `.playing` highlight, cheap per click.
 async function renderSessions() {
   const cachedUrls = await getCachedUrls();
   sessionListEl.replaceChildren();
@@ -513,9 +488,8 @@ function playSession(session) {
   const token = ++loadToken;
   audio.src = session.url;
   audio.play().catch((e) => {
-    // A superseded load (rapid session switch) has already started a newer
-    // load — its rejection (AbortError, or anything else) is stale, ignore it.
-    // For a current load, surface and log so the failure isn't silent.
+    // A superseded load (rapid switch) already started a newer one — its
+    // rejection is stale, ignore. Surface only a current load's failure.
     if (token !== loadToken || e.name === "AbortError") return;
     console.error("audio.play() rejected:", e);
     playerStatus.textContent = `Playback failed: ${e.message || e.name}`;
@@ -544,8 +518,7 @@ audio.addEventListener('timeupdate', () => {
 });
 
 audio.addEventListener('ended', () => {
-  // timeupdate stops just shy of duration, so snap both the bar and the label
-  // to the end on natural completion.
+  // timeupdate stops just shy of duration; snap the bar and label to the end.
   progressBar.value = 1000;
   elapsedEl.textContent = formatMMSS(audio.duration);
 });
@@ -553,12 +526,12 @@ audio.addEventListener('pause', () => setPlayIcon(false));
 audio.addEventListener('play', () => setPlayIcon(true));
 audio.addEventListener('playing', () => { playerStatus.textContent = ''; });
 audio.addEventListener('waiting', () => { playerStatus.replaceChildren(spinner('Buffering')); playerStatus.className = 'player-status'; });
-// SW's CacheFirst route caches the audio on first fetch; re-render here so the
-// offline checkmark appears once canplaythrough implies the cache write landed.
+// canplaythrough implies the SW cached the audio — re-render so the offline
+// checkmark appears.
 audio.addEventListener('canplaythrough', () => { renderSessions(); updateCacheSize(); });
 audio.addEventListener('error', () => {
-  // Ignore the abort fired when src changes mid-load (rapid session switch) —
-  // a newer load has already reset the status to Loading.
+  // Ignore the abort from src changing mid-load (rapid switch); a newer load
+  // already reset the status.
   if (audio.error?.code === MediaError.MEDIA_ERR_ABORTED) return;
   playerStatus.textContent = 'Failed to load audio. The source may be unavailable.';
   playerStatus.className = 'player-status error';
@@ -585,8 +558,8 @@ playerClose.addEventListener('click', () => {
 });
 
 // --- Media Session API (lock screen / background controls) ---
-// Clamp a target time into the seekable range; duration is NaN until metadata
-// loads, so fall back to an open upper bound.
+// Clamp into the seekable range; duration is NaN until metadata loads, so fall
+// back to an open upper bound.
 function clampTime(t) {
   const upper = isFinite(audio.duration) ? audio.duration : Infinity;
   return Math.min(upper, Math.max(0, t));
@@ -627,10 +600,8 @@ async function clearCache() {
 }
 
 async function updateCacheSize() {
-  // Count, not bytes: the cached audio is cross-origin opaque, and
-  // `response.blob().size` returns 0 for opaque responses to prevent CORS
-  // info leakage. `navigator.storage.estimate()` reports total origin storage
-  // (precache + everything), which misleads on a fresh install.
+  // Count, not bytes: opaque cross-origin responses report blob().size === 0,
+  // and storage.estimate() counts all origin storage (precache included).
   const cache = await caches.open(AUDIO_CACHE);
   const keys = await cache.keys();
   cacheSizeEl.textContent = `Cached: ${keys.length} session${keys.length !== 1 ? 's' : ''}`;
@@ -659,15 +630,11 @@ function initGuidedOnce() {
   updateCacheSize();
 }
 
-// =============================================
 // Service worker
-// =============================================
-// Register the SW and only ask a waiting one to activate when the user is
-// not mid-session. "Safe" = audio paused AND no breathing loop active.
-// Reasserted on visibility hide and after every audio pause/end. Once the new
-// SW takes control we reload so the page runs the new assets instead of the old
-// ones still in memory; `hadController` skips that reload on the first-ever
-// install, whose clients.claim() also fires controllerchange.
+// Only skip-waiting a new SW when it's safe to swap the precache: audio paused
+// and no breathing loop running. On controllerchange we reload to run the new
+// assets; `hadController` skips that reload on first install, whose
+// clients.claim() also fires controllerchange.
 if ('serviceWorker' in navigator) {
   const hadController = !!navigator.serviceWorker.controller;
   let reloading = false;

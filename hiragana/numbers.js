@@ -17,12 +17,10 @@ export const NUMBER_ATOMS = {
   10: { kana: "じゅう", romaji: "juu",   alts: ["ju", "jyuu", "jyu"] },
 };
 
-// composeNumber(n) → { kana, romaji, alts }
 // `alts` enumerates every romaji combination of atom-or-alt at each position
-// EXCEPT the canonical one (which is `romaji` itself).
-// Invariant: an atom's `alts` list must NOT contain its own `romaji`; the
-// canonical-exclusion below assumes the canonical appears exactly once in the
-// cartesian product (first option at each position).
+// EXCEPT the canonical (`romaji` itself). Invariant: an atom's `alts` must not
+// contain its own `romaji`, so the canonical appears exactly once in the
+// cartesian product (first option at each position) and the filter below drops it.
 export function composeNumber(n) {
   if (!Number.isInteger(n) || n < 1 || n > 99) {
     throw new Error(`composeNumber: ${n} out of range (1–99)`);

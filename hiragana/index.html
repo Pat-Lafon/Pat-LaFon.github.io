@@ -23,7 +23,8 @@
     html { background: radial-gradient(ellipse at top, #f5efe2 0%, #ebe2cf 60%, #ddd0b3 100%); }
     body { -webkit-tap-highlight-color: transparent; font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', serif; }
     .boot { display: flex; align-items: center; justify-content: center; height: 100%; color: #1c1917; font-size: min(48vh, 70vw); line-height: 1; }
-  </style>
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+</style>
 </head>
 <body>
   <div id="root"><div class="boot">ひ</div></div>
@@ -43,13 +44,10 @@
     import { createRoot } from "react-dom/client";
     import { App } from "./app.js";
 
-    // Register service worker for offline support. A new SW that finishes
-    // installing while a tab is open stays in `waiting`; we only tell it to
-    // skipWaiting when the tab is backgrounded, so an active study session
-    // never has its precache swapped underneath it. When it does take control
-    // we reload so the page runs the new assets instead of the old ones still
-    // in memory; `hadController` skips that reload on the first-ever install,
-    // whose clients.claim() also fires controllerchange.
+    // Register the SW; only skipWaiting when the tab is backgrounded so an
+    // active study session never has its precache swapped underneath it. On
+    // controllerchange we reload to run the new assets; `hadController` skips
+    // that reload on first install, whose clients.claim() also fires it.
     if ("serviceWorker" in navigator) {
       const hadController = !!navigator.serviceWorker.controller;
       let reloading = false;

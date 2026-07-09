@@ -4,17 +4,13 @@
 //
 //   1. Precache misses — a URL the app fetches at runtime is not in the
 //      precache manifest baked into _site/<app>/sw.js, so a cold-offline
-//      load 404s. Detected by extracting the manifest from the built SW
-//      and comparing it to the URL set the app actually references.
+//      load 404s.
 //
-//   2. Wrong SW strategy config for cross-origin audio — the only way the
-//      meditation app caches its guided sessions is via the SW route. The
-//      <audio src> fetch is no-CORS, so the response is opaque (status 0).
-//      Workbox's default cacheable policy rejects status 0; without an
-//      explicit CacheableResponsePlugin allowing 0, the cache write is
-//      silently skipped and offline mode doesn't work. Detected by
-//      stub-executing the SW source against fake workbox classes and
-//      inspecting the captured route registration.
+//   2. Wrong SW strategy config for cross-origin audio — the meditation app
+//      caches guided sessions only via the SW route. The <audio src> fetch is
+//      no-CORS, so the response is opaque (status 0); without a
+//      CacheableResponsePlugin allowing 0, Workbox's default policy drops it
+//      and offline silently breaks.
 //
 // Run with `node _config/sw/offline.test.js`. Requires `npm run build`
 // to have produced _site/<app>/sw.js.

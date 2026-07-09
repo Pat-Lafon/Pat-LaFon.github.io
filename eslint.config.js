@@ -12,7 +12,7 @@ export default [
       "no-unused-vars": ["warn", { argsIgnorePattern: "^_", caughtErrorsIgnorePattern: "^_|^e$" }],
       // localStorage init in effects is standard for this app pattern
       "react-hooks/set-state-in-effect": "off",
-      // useState(() => Date.now()) is fine for a timestamp seed
+      // useState seeds read the clock (todayKey) and localStorage — impure but fine
       "react-hooks/purity": "off",
     },
     languageOptions: {
@@ -42,8 +42,8 @@ export default [
     },
   },
   {
-    // Pure shared modules — imported by both the React app and Node tests.
-    // `console` is available in both runtimes; we use it for storage-failure warnings.
+    // Pure shared modules (DOM/storage passed in, never referenced globally) —
+    // run in the browser app and imported by Node tests.
     files: ["hiragana/srs.js", "hiragana/numbers.js", "hiragana/storage.js"],
     languageOptions: {
       globals: { ...globals.browser },

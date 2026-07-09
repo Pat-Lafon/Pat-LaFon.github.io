@@ -17,15 +17,16 @@ import {
 
 const html = htm.bind(React.createElement);
 
+// Reveal-phase buttons use this on mousedown: a tap otherwise blurs the practice
+// input, which on iOS dismisses the keyboard and lurches the card.
+const preventBlur = (e) => e.preventDefault();
+
 function kanaEntry(kana, romaji) {
   return { id: kana, kana, romaji, prompt: null, alts: null };
 }
 
 const COMPOUND_SAMPLER = [11, 14, 17, 19, 25, 34, 47, 56, 63, 79, 88, 99];
 
-// Single source of truth. Each section has a kind (which drives behavior:
-// audio playback, mnemonic lookup, anti-cheat). Each row inside a section
-// has a unified `entries` shape: { id, kana, romaji, prompt, alts }.
 const SECTIONS = [
   {
     name: "Hiragana", kind: "kana",
@@ -68,12 +69,12 @@ const SECTIONS = [
   },
 ];
 
-// Flat row list (with section/kind injected) for places that don't care about grouping.
+// Flat row list for consumers that don't need section grouping.
 const ROWS = SECTIONS.flatMap(s =>
   s.rows.map(r => ({ ...r, section: s.name, kind: s.kind }))
 );
 
-// id → static fields for hydrating lean cards from storage and seeding fresh ones.
+// id → static card fields; hydrateCard rebuilds full cards from these.
 export const ROWS_BY_ID = Object.fromEntries(
   ROWS.flatMap(row => row.entries.map(e => [e.id, {
     kana: e.kana, romaji: e.romaji, rowId: row.id,
@@ -106,14 +107,10 @@ const HAS_MNEMONIC = new Set([
   "わ", "を", "ん",
 ]);
 
-// Pin the app to the region the on-screen keyboard leaves visible. `height`
-// shrinks the container into that region; `offsetTop` follows the pan iOS does
-// when it focuses the bottom-anchored input — the body can't scroll (no
-// overflow), so instead of scrolling the document iOS slides the whole visual
-// viewport down, and without compensating for that slide the card above the
-// input runs off the top of the screen. iOS reports the pan as a visualViewport
-// `scroll` (not `resize`), so both events are needed to stay glued to the
-// visible rectangle through the keyboard animation.
+// Pin the app to the keyboard-visible region: `height` shrinks the container into
+// it, `offsetTop` cancels the pan iOS applies when focusing the bottom input (which
+// would otherwise push the card off the top). iOS reports that pan as a
+// visualViewport `scroll`, not `resize`, so both events are needed.
 function useViewport() {
   const [viewport, setViewport] = useState(() => ({
     height: window.visualViewport?.height ?? window.innerHeight,
@@ -122,7 +119,10 @@ function useViewport() {
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
-    const update = () => setViewport({ height: vv.height, offsetTop: vv.offsetTop });
+    const update = () => setViewport((prev) =>
+      prev.height === vv.height && prev.offsetTop === vv.offsetTop
+        ? prev
+        : { height: vv.height, offsetTop: vv.offsetTop });
     vv.addEventListener("resize", update);
     vv.addEventListener("scroll", update);
     update();
@@ -144,15 +144,25 @@ function loadInitialState() {
   };
 }
 
+function freshCardsFor(enabledRows) {
+  const freshLean = { box: 1, lastDay: null };
+  const enabled = new Set(enabledRows);
+  const out = {};
+  for (const [id, fields] of Object.entries(ROWS_BY_ID)) {
+    if (enabled.has(fields.rowId)) out[id] = hydrateCard(id, freshLean, ROWS_BY_ID);
+  }
+  return out;
+}
+
 export function App() {
   const [initial] = useState(loadInitialState);
   const [today] = useState(todayKey);
   const [enabledRows, setEnabledRows] = useState(initial.enabledRows);
   const [cards, setCards] = useState(initial.cards);
   const [current, setCurrent] = useState(null);
-  const [revealed, setRevealed] = useState(false);
   const [input, setInput] = useState("");
   const [feedback, setFeedback] = useState(null);
+  const revealed = feedback !== null;
   const [stats, setStats] = useState(() => loadStatsFromStorage(localStorage, todayKey()));
   const [showSettings, setShowSettings] = useState(false);
   const inputRef = useRef(null);
@@ -183,11 +193,9 @@ export function App() {
     setCards((prev) => {
       const next = { ...prev };
       let changed = false;
-      const freshLean = { box: 1, lastDay: null };
-      const enabled = new Set(enabledRows);
-      for (const [id, fields] of Object.entries(ROWS_BY_ID)) {
-        if (!enabled.has(fields.rowId) || next[id]) continue;
-        next[id] = hydrateCard(id, freshLean, ROWS_BY_ID);
+      for (const [id, card] of Object.entries(freshCardsFor(enabledRows))) {
+        if (next[id]) continue;
+        next[id] = card;
         changed = true;
       }
       return changed ? next : prev;
@@ -199,8 +207,7 @@ export function App() {
 
   const audioPool = useRef(new Map());
   function speak(card) {
-    // Accepts a card object; for number cards we route to TTS with the kana reading
-    // (no per-syllable audio file for things like "にじゅういち").
+    // Number cards have no per-syllable audio file (e.g. "にじゅういち"), so use TTS.
     if (!card) return;
     if (card.kind === "number") { speakViaTTS(card.kana); return; }
     const romaji = KANA_TO_ROMAJI[card.kana];
@@ -227,10 +234,10 @@ export function App() {
   function handleSubmit(e) {
     e?.preventDefault();
     if (!current || revealed) return;
-    // Normalize: lowercase + strip all whitespace so "ni juu ichi" === "nijuuichi".
+    // Strip whitespace + lowercase so "ni juu ichi" matches "nijuuichi".
     const guess = input.toLowerCase().replace(/\s+/g, "");
     if (!guess) return;
-    // Anti-cheat for number cards: refuse pure-digit input (would bypass recall).
+    // Refuse pure digits on number cards — typing "21" would bypass recall.
     const digitBypass = current.kind === "number" && /^\d+$/.test(guess);
     const altsForKana = ALT_ROMAJI[current.kana] || [];
     const cardAlts = current.alts || [];
@@ -240,7 +247,6 @@ export function App() {
       || cardAlts.includes(guess)
     );
     setFeedback({ correct, answer: current.romaji });
-    setRevealed(true);
     setStats((s) => ({ ...s, reviewed: s.reviewed + 1, correct: s.correct + (correct ? 1 : 0) }));
     speak(current);
     if (!correct) {
@@ -255,13 +261,11 @@ export function App() {
     const newCards = { ...cards, [card.id]: updated };
     setCards((prev) => ({ ...prev, [card.id]: updated }));
     setCurrent(pickNext(newCards));
-    setRevealed(false);
     setFeedback(null);
     setInput("");
   }
 
   function nextCard() {
-    setRevealed(false);
     setFeedback(null);
     setInput("");
     setCurrent(pickNext(cards));
@@ -273,22 +277,20 @@ export function App() {
     if (next) setCurrent(next);
   }, [current, cards, today, enabledRows]);
 
-  // Keep a ref pointing at the latest nextCard closure so the keydown handler
-  // can call it without re-binding on every state change (and without the
-  // stale-closure trap the old eslint-disable was masking).
+  // Hold the latest nextCard so the keydown listener needn't re-bind each render.
   const nextCardRef = useRef(nextCard);
   useEffect(() => { nextCardRef.current = nextCard; });
 
   useEffect(() => {
     function onKey(e) {
-      if (e.key === "Enter" && revealed && feedback && !feedback.correct) {
+      if (e.key === "Enter" && feedback && !feedback.correct) {
         e.preventDefault();
         nextCardRef.current();
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [revealed, feedback]);
+  }, [feedback]);
 
   function toggleRow(id) {
     setEnabledRows((rows) => rows.includes(id) ? rows.filter(r => r !== id) : [...rows, id]);
@@ -296,15 +298,16 @@ export function App() {
 
   function resetProgress() {
     if (!confirm("Reset all SRS progress? Your enabled rows will stay the same.")) return;
-    setCards({});
+    setCards(freshCardsFor(enabledRows));
     setCurrent(null);
+    setFeedback(null);
+    setInput("");
   }
 
   const enabledCards = useMemo(
     () => Object.values(cards).filter(c => enabledRows.includes(c.rowId)),
     [cards, enabledRows],
   );
-  // pickNext never re-serves a done card, so this count only falls — safe as a countdown.
   const remaining = useMemo(
     () => enabledCards.filter(c => !isDoneToday(c, today)).length,
     [enabledCards, today],
@@ -381,9 +384,11 @@ export function App() {
 function PracticeView({ current, input, setInput, revealed, feedback, handleSubmit, grade, nextCard, speak, inputRef, remaining, learnedCount, totalCount, accuracy, stats, viewportHeight }) {
   const [mnemonicFailed, setMnemonicFailed] = useState(false);
 
+  // Keep the input focused across reveals: if it blurs, iOS dismisses the keyboard,
+  // shrinking visualViewport and lurching the card.
   useEffect(() => {
     setMnemonicFailed(false);
-    if (!revealed) inputRef.current?.focus();
+    inputRef.current?.focus();
   }, [current?.id, revealed, inputRef]);
 
   if (!current) {
@@ -434,7 +439,7 @@ function PracticeView({ current, input, setInput, revealed, feedback, handleSubm
             }}
           >${current.prompt ?? current.kana}</div>
 
-          ${revealed && feedback && html`
+          ${feedback && html`
             <div class="text-center mt-3" style=${{ animation: "fadeIn 0.25s ease-out" }}>
               <div class="text-[10px] tracking-[0.3em] uppercase mb-1" style=${{ color: isCorrect ? "#3a5a3a" : accent }}>
                 ${isCorrect ? "Correct" : "Answer"}
@@ -477,53 +482,49 @@ function PracticeView({ current, input, setInput, revealed, feedback, handleSubm
         </div>
       </div>
 
-      <div class="mt-3 flex-shrink-0">
-        ${!revealed
-          ? html`<form onSubmit=${handleSubmit}>
-              <input
-                ref=${inputRef}
-                autoFocus
-                type="text"
-                inputMode="text"
-                value=${input}
-                onChange=${(e) => setInput(e.target.value)}
-                placeholder="type romaji…"
-                autoCapitalize="none"
-                autoCorrect="off"
-                spellCheck=${false}
-                enterKeyHint="go"
-                class="w-full text-center text-xl py-3 bg-transparent border-b-2 border-stone-400 focus:border-stone-900 outline-none italic text-stone-900 placeholder:text-stone-400 placeholder:italic transition-colors"
-                style=${{ fontFamily: "'EB Garamond', serif" }}
-              />
-            </form>`
-          : isWrong
-            ? html`<button
-                onClick=${nextCard}
-                class="w-full py-3 text-sm tracking-[0.3em] uppercase text-white transition-colors"
-                style=${{ backgroundColor: accent, fontFamily: "inherit" }}
-              >
-                Continue ↵
-              </button>`
-            : html`<div>
-                <div class="text-center text-[9px] tracking-[0.3em] uppercase text-stone-500 mb-2">
-                  How well did you know it?
-                </div>
-                <div class="grid grid-cols-4 gap-2">
-                  <${GradeButton} label="Forgot"   sub="box 1" onClick=${() => grade(0)} color="#9c2a1f" />
-                  <${GradeButton} label="Slow"     sub="−1"    onClick=${() => grade(1)} color="#7a5a2e" />
-                  <${GradeButton} label="Recalled" sub="+1"    onClick=${() => grade(2)} color="#3a5a3a" />
-                  <${GradeButton} label="Instant"  sub="+2"    onClick=${() => grade(3)} color="#2e4f6e" />
-                </div>
-              </div>`
-        }
+      <div class="mt-3 flex-shrink-0 relative">
+        ${revealed && (isWrong
+          ? html`<button
+              onClick=${nextCard}
+              onMouseDown=${preventBlur}
+              class="w-full py-3 text-sm tracking-[0.3em] uppercase text-white transition-colors"
+              style=${{ backgroundColor: accent, fontFamily: "inherit" }}
+            >
+              Continue ↵
+            </button>`
+          : html`<div>
+              <div class="text-center text-[9px] tracking-[0.3em] uppercase text-stone-500 mb-2">
+                How well did you know it?
+              </div>
+              <div class="grid grid-cols-4 gap-2">
+                <${GradeButton} label="Forgot"   sub="box 1" onClick=${() => grade(0)} color="#9c2a1f" />
+                <${GradeButton} label="Slow"     sub="−1"    onClick=${() => grade(1)} color="#7a5a2e" />
+                <${GradeButton} label="Recalled" sub="+1"    onClick=${() => grade(2)} color="#3a5a3a" />
+                <${GradeButton} label="Instant"  sub="+2"    onClick=${() => grade(3)} color="#2e4f6e" />
+              </div>
+            </div>`)}
+        <form
+          onSubmit=${handleSubmit}
+          aria-hidden=${revealed}
+          class=${revealed ? "absolute inset-0 opacity-0 pointer-events-none" : ""}
+        >
+          <input
+            ref=${inputRef}
+            autoFocus
+            type="text"
+            inputMode="text"
+            value=${input}
+            onChange=${(e) => setInput(e.target.value)}
+            placeholder="type romaji…"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck=${false}
+            enterKeyHint="go"
+            class="w-full text-center text-xl py-3 bg-transparent border-b-2 border-stone-400 focus:border-stone-900 outline-none italic text-stone-900 placeholder:text-stone-400 placeholder:italic transition-colors"
+            style=${{ fontFamily: "'EB Garamond', serif" }}
+          />
+        </form>
       </div>
-
-      <style>${`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(4px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
     </div>
   `;
 }
@@ -551,12 +552,6 @@ function DoneView({ reviewed, accuracy, learnedCount, totalCount }) {
           <div class="text-[9px] tracking-[0.2em] uppercase text-stone-500 mt-1">Learned</div>
         </div>
       </div>
-      <style>${`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(4px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
     </div>
   `;
 }
@@ -565,6 +560,7 @@ function GradeButton({ label, sub, onClick, color }) {
   return html`
     <button
       onClick=${onClick}
+      onMouseDown=${preventBlur}
       aria-label=${`${label}, ${sub}`}
       class="py-3 px-2 border border-stone-300 hover:border-stone-700 transition-all bg-white/40 hover:bg-white/70 group"
     >
@@ -585,8 +581,7 @@ function SpeakerIcon() {
 }
 
 function rowPreview(row) {
-  // Unified entry shape: kana cards have prompt: null, numbers have prompt: "21".
-  // Show prompt if set, else show the kana characters.
+  // kana cards have prompt: null; number cards have prompt: "21".
   return row.entries.map(e => e.prompt ?? e.kana).join(" ");
 }
 
