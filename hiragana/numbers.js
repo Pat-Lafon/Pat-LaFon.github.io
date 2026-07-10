@@ -2,6 +2,8 @@
 // Atom readings are the modern counting forms; `alts` lists classical/short
 // alternatives the matcher should also accept.
 
+import { combineRomaji } from "./romaji.js";
+
 export const NUMBER_ATOMS = {
   1:  { kana: "いち",   romaji: "ichi",  alts: [] },
   2:  { kana: "に",     romaji: "ni",    alts: [] },
@@ -17,10 +19,6 @@ export const NUMBER_ATOMS = {
   10: { kana: "じゅう", romaji: "juu",   alts: ["ju", "jyuu", "jyu"] },
 };
 
-// `alts` enumerates every romaji combination of atom-or-alt at each position
-// EXCEPT the canonical (`romaji` itself). Invariant: an atom's `alts` must not
-// contain its own `romaji`, so the canonical appears exactly once in the
-// cartesian product (first option at each position) and the filter below drops it.
 export function composeNumber(n) {
   if (!Number.isInteger(n) || n < 1 || n > 99) {
     throw new Error(`composeNumber: ${n} out of range (1–99)`);
@@ -38,16 +36,8 @@ export function composeNumber(n) {
       ? [NUMBER_ATOMS[tensDigit], juu]
       : [NUMBER_ATOMS[tensDigit], juu, NUMBER_ATOMS[onesDigit]];
   const kana = parts.map(p => p.kana).join("");
-  const romaji = parts.map(p => p.romaji).join("");
-  const optionsPerPart = parts.map(p => [p.romaji, ...p.alts]);
-  const combos = [];
-  (function cartesian(i, acc) {
-    if (i === optionsPerPart.length) { combos.push(acc.join("")); return; }
-    for (const o of optionsPerPart[i]) {
-      acc.push(o); cartesian(i + 1, acc); acc.pop();
-    }
-  })(0, []);
-  return { kana, romaji, alts: combos.filter(c => c !== romaji) };
+  const { canonical, alts } = combineRomaji(parts.map(p => [p.romaji, ...p.alts]));
+  return { kana, romaji: canonical, alts };
 }
 
 export function numberEntry(n) {

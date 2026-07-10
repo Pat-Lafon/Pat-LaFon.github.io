@@ -18,7 +18,10 @@ const REPO_ROOT = resolve(__dirname, "..");
 // SW sources live in _config/sw/ (not in the app dirs) so Eleventy's
 // passthrough copy doesn't ship them to _site.
 const APPS = [
-  { id: "hiragana",   src: "_config/sw/hiragana.js",   siteDir: "_site/hiragana"   },
+  // Mnemonics are runtime-cached (see _config/sw/hiragana.js), not precached — they
+  // render only on a wrong answer, so keeping ~⅔ of the payload out of install is
+  // worth the "first offline miss shows no image" cost.
+  { id: "hiragana",   src: "_config/sw/hiragana.js",   siteDir: "_site/hiragana",   extraIgnores: ["mnemonics/**"] },
   { id: "meditation", src: "_config/sw/meditation.js", siteDir: "_site/meditation" },
 ];
 
@@ -36,7 +39,7 @@ export async function buildServiceWorkers() {
     const { manifestEntries, size, warnings } = await getManifest({
       globDirectory: dir,
       globPatterns: ["**/*.{html,js,css,png,jpg,jpeg,svg,m4a,oga,ogg,webp,json,webmanifest}"],
-      globIgnores: ["**/*.test.js", "**/sw.js"],
+      globIgnores: ["**/*.test.js", "**/sw.js", ...(app.extraIgnores ?? [])],
       maximumFileSizeToCacheInBytes: 500 * 1024,
     });
 

@@ -1,0 +1,78 @@
+[
+  {
+    "name": "Hiragana",
+    "kind": "hiragana",
+    "rows": [
+      { "id": "vowels", "label": "Vowels", "entries": [["あ","a"],["い","i"],["う","u"],["え","e"],["お","o"]] },
+      { "id": "k", "label": "K-row", "entries": [["か","ka"],["き","ki"],["く","ku"],["け","ke"],["こ","ko"]] },
+      { "id": "s", "label": "S-row", "entries": [["さ","sa"],["し","shi"],["す","su"],["せ","se"],["そ","so"]] },
+      { "id": "t", "label": "T-row", "entries": [["た","ta"],["ち","chi"],["つ","tsu"],["て","te"],["と","to"]] },
+      { "id": "n", "label": "N-row", "entries": [["な","na"],["に","ni"],["ぬ","nu"],["ね","ne"],["の","no"]] },
+      { "id": "h", "label": "H-row", "entries": [["は","ha"],["ひ","hi"],["ふ","fu",["hu"]],["へ","he"],["ほ","ho"]] },
+      { "id": "m", "label": "M-row", "entries": [["ま","ma"],["み","mi"],["む","mu"],["め","me"],["も","mo"]] },
+      { "id": "y", "label": "Y-row", "entries": [["や","ya"],["ゆ","yu"],["よ","yo"]] },
+      { "id": "r", "label": "R-row", "entries": [["ら","ra"],["り","ri"],["る","ru"],["れ","re"],["ろ","ro"]] },
+      { "id": "w", "label": "W-row + n", "entries": [["わ","wa"],["を","wo",["o"]],["ん","n"]] },
+      { "id": "g", "label": "G-row (dakuten)", "entries": [["が","ga"],["ぎ","gi"],["ぐ","gu"],["げ","ge"],["ご","go"]] },
+      { "id": "z", "label": "Z-row (dakuten)", "entries": [["ざ","za"],["じ","ji"],["ず","zu"],["ぜ","ze"],["ぞ","zo"]] },
+      { "id": "d", "label": "D-row (dakuten)", "entries": [["だ","da"],["ぢ","di",["ji"]],["づ","du",["zu"]],["で","de"],["ど","do"]] },
+      { "id": "b", "label": "B-row (dakuten)", "entries": [["ば","ba"],["び","bi"],["ぶ","bu"],["べ","be"],["ぼ","bo"]] },
+      { "id": "p", "label": "P-row (handakuten)", "entries": [["ぱ","pa"],["ぴ","pi"],["ぷ","pu"],["ぺ","pe"],["ぽ","po"]] },
+      { "id": "ky", "label": "Ky-combo", "entries": [["きゃ","kya"],["きゅ","kyu"],["きょ","kyo"]] },
+      { "id": "sh", "label": "Sh-combo", "entries": [["しゃ","sha"],["しゅ","shu"],["しょ","sho"]] },
+      { "id": "ch", "label": "Ch-combo", "entries": [["ちゃ","cha"],["ちゅ","chu"],["ちょ","cho"]] },
+      { "id": "ny", "label": "Ny-combo", "entries": [["にゃ","nya"],["にゅ","nyu"],["にょ","nyo"]] },
+      { "id": "hy", "label": "Hy-combo", "entries": [["ひゃ","hya"],["ひゅ","hyu"],["ひょ","hyo"]] },
+      { "id": "my", "label": "My-combo", "entries": [["みゃ","mya"],["みゅ","myu"],["みょ","myo"]] },
+      { "id": "ry", "label": "Ry-combo", "entries": [["りゃ","rya"],["りゅ","ryu"],["りょ","ryo"]] },
+      { "id": "gy", "label": "Gy-combo", "entries": [["ぎゃ","gya"],["ぎゅ","gyu"],["ぎょ","gyo"]] },
+      { "id": "jy", "label": "J-combo", "entries": [["じゃ","ja"],["じゅ","ju"],["じょ","jo"]] },
+      { "id": "by", "label": "By-combo", "entries": [["びゃ","bya"],["びゅ","byu"],["びょ","byo"]] },
+      { "id": "py", "label": "Py-combo", "entries": [["ぴゃ","pya"],["ぴゅ","pyu"],["ぴょ","pyo"]] }
+    ]
+  },
+  {
+    "name": "Katakana",
+    "kind": "katakana",
+    "rows": [
+      { "id": "kata-vowels", "label": "Vowels", "entries": [["ア","a"],["イ","i"],["ウ","u"],["エ","e"],["オ","o"]] },
+      { "id": "kata-k", "label": "K-row", "entries": [["カ","ka"],["キ","ki"],["ク","ku"],["ケ","ke"],["コ","ko"]] },
+      { "id": "kata-s", "label": "S-row", "entries": [["サ","sa"],["シ","shi"],["ス","su"],["セ","se"],["ソ","so"]] },
+      { "id": "kata-t", "label": "T-row", "entries": [["タ","ta"],["チ","chi"],["ツ","tsu"],["テ","te"],["ト","to"]] },
+      { "id": "kata-n", "label": "N-row", "entries": [["ナ","na"],["ニ","ni"],["ヌ","nu"],["ネ","ne"],["ノ","no"]] },
+      { "id": "kata-h", "label": "H-row", "entries": [["ハ","ha"],["ヒ","hi"],["フ","fu",["hu"]],["ヘ","he"],["ホ","ho"]] },
+      { "id": "kata-m", "label": "M-row", "entries": [["マ","ma"],["ミ","mi"],["ム","mu"],["メ","me"],["モ","mo"]] },
+      { "id": "kata-y", "label": "Y-row", "entries": [["ヤ","ya"],["ユ","yu"],["ヨ","yo"]] },
+      { "id": "kata-r", "label": "R-row", "entries": [["ラ","ra"],["リ","ri"],["ル","ru"],["レ","re"],["ロ","ro"]] },
+      { "id": "kata-w", "label": "W-row + n", "entries": [["ワ","wa"],["ヲ","wo",["o"]],["ン","n"]] },
+      { "id": "kata-g", "label": "G-row (dakuten)", "entries": [["ガ","ga"],["ギ","gi"],["グ","gu"],["ゲ","ge"],["ゴ","go"]] },
+      { "id": "kata-z", "label": "Z-row (dakuten)", "entries": [["ザ","za"],["ジ","ji"],["ズ","zu"],["ゼ","ze"],["ゾ","zo"]] },
+      { "id": "kata-d", "label": "D-row (dakuten)", "entries": [["ダ","da"],["ヂ","di",["ji"]],["ヅ","du",["zu"]],["デ","de"],["ド","do"]] },
+      { "id": "kata-b", "label": "B-row (dakuten)", "entries": [["バ","ba"],["ビ","bi"],["ブ","bu"],["ベ","be"],["ボ","bo"]] },
+      { "id": "kata-p", "label": "P-row (handakuten)", "entries": [["パ","pa"],["ピ","pi"],["プ","pu"],["ペ","pe"],["ポ","po"]] },
+      { "id": "kata-ky", "label": "Ky-combo", "entries": [["キャ","kya"],["キュ","kyu"],["キョ","kyo"]] },
+      { "id": "kata-sh", "label": "Sh-combo", "entries": [["シャ","sha"],["シュ","shu"],["ショ","sho"]] },
+      { "id": "kata-ch", "label": "Ch-combo", "entries": [["チャ","cha"],["チュ","chu"],["チョ","cho"]] },
+      { "id": "kata-ny", "label": "Ny-combo", "entries": [["ニャ","nya"],["ニュ","nyu"],["ニョ","nyo"]] },
+      { "id": "kata-hy", "label": "Hy-combo", "entries": [["ヒャ","hya"],["ヒュ","hyu"],["ヒョ","hyo"]] },
+      { "id": "kata-my", "label": "My-combo", "entries": [["ミャ","mya"],["ミュ","myu"],["ミョ","myo"]] },
+      { "id": "kata-ry", "label": "Ry-combo", "entries": [["リャ","rya"],["リュ","ryu"],["リョ","ryo"]] },
+      { "id": "kata-gy", "label": "Gy-combo", "entries": [["ギャ","gya"],["ギュ","gyu"],["ギョ","gyo"]] },
+      { "id": "kata-jy", "label": "J-combo", "entries": [["ジャ","ja"],["ジュ","ju"],["ジョ","jo"]] },
+      { "id": "kata-by", "label": "By-combo", "entries": [["ビャ","bya"],["ビュ","byu"],["ビョ","byo"]] },
+      { "id": "kata-py", "label": "Py-combo", "entries": [["ピャ","pya"],["ピュ","pyu"],["ピョ","pyo"]] }
+    ]
+  },
+  {
+    "name": "Katakana — extended",
+    "kind": "foreign",
+    "rows": [
+      { "id": "kata-ext-f", "label": "F-row (foreign)", "entries": [["ファ","fa"],["フィ","fi"],["フェ","fe"],["フォ","fo"]] },
+      { "id": "kata-ext-v", "label": "V-row (foreign)", "entries": [["ヴ","vu"],["ヴァ","va"],["ヴィ","vi"],["ヴェ","ve"],["ヴォ","vo"]] },
+      { "id": "kata-ext-w", "label": "W-row (foreign)", "entries": [["ウィ","wi"],["ウェ","we"],["ウォ","wo"]] },
+      { "id": "kata-ext-td", "label": "T/D-row (foreign)", "entries": [["ティ","ti"],["ディ","di"],["トゥ","tu"],["ドゥ","du"]] },
+      { "id": "kata-ext-j", "label": "Ch/Sh/J (foreign)", "entries": [["チェ","che"],["シェ","she"],["ジェ","je"]] },
+      { "id": "kata-ext-ts", "label": "Ts-row + ye (foreign)", "entries": [["ツァ","tsa"],["ツィ","tsi"],["ツェ","tse"],["ツォ","tso"],["イェ","ye"]] }
+    ]
+  }
+]

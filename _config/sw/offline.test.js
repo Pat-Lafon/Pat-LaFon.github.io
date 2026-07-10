@@ -21,6 +21,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join, relative } from "node:path";
+import DECK from "../../hiragana/deck.json" with { type: "json" };
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, "..", "..");
@@ -49,26 +50,31 @@ function extractManifest(swPath) {
 // ---------------------------------------------------------------------------
 
 function hiraganaExpectedUrls() {
-  const app = readFileSync(join(REPO_ROOT, "hiragana/app.js"), "utf-8");
   const html = readFileSync(join(REPO_ROOT, "hiragana/index.html"), "utf-8");
 
-  // Audio: kanaEntry/kataEntry("kana","romaji"[, [alts]]) calls in SECTIONS →
-  // audio/{romaji}.m4a. foreignEntry is deliberately excluded — those cards have
+  // Audio: hiragana/katakana cards name their recording audio/{romaji}.m4a. The
+  // "foreign" extended rows are deliberately excluded — those cards have
   // audioKey:null and fall back to TTS, so no recording exists to precache.
-  const pairs = [...app.matchAll(/(?:kanaEntry|kataEntry)\("([^"]+)","([^"]+)"(?:,\s*\[[^\]]*\])?\)/g)].map(m => [m[1], m[2]]);
-
-  // Mnemonics: the app fetches mnemonics/{answer}.png optimistically and hides
-  // misses via onError, so the invariant is that every mnemonic file that
-  // exists is precached for offline. Derive the set from the files on disk.
-  const mnemFiles = readdirSync(join(REPO_ROOT, "hiragana/mnemonics")).filter(f => f.endsWith(".png"));
-
   const urls = new Set();
-  for (const [, r] of pairs) urls.add(`audio/${r}.m4a`);
-  for (const f of mnemFiles) urls.add(`mnemonics/${f}`);
+  for (const section of DECK) {
+    if (section.kind === "foreign") continue;
+    for (const row of section.rows) {
+      for (const [, romaji] of row.entries) urls.add(`audio/${romaji}.m4a`);
+    }
+  }
+
+  // Mnemonics are deliberately NOT precached — they render only on a wrong answer,
+  // so the SW caches them at runtime (CacheFirst) instead. Coverage for them is
+  // asserted separately (mnemonicsHaveRuntimeRoute below), not here.
+
+  // Data files app.js imports at load — a cold-offline launch 404s the app if
+  // either drops out of precache.
+  urls.add("deck.json");
+  urls.add("words.json");
 
   // index.html: same-origin script src, importmap entries, manifest, icons.
-  // Skip cross-origin scripts (Tailwind CDN) — those are handled by a
-  // runtime route, not precache.
+  // index.html carries no cross-origin scripts (styles are prebuilt to styles.css),
+  // but the http/data guards below stay to skip any that appear.
   for (const m of html.matchAll(/<script[^>]+src=["']([^"']+)["']/gi)) {
     if (!/^(https?|data):/.test(m[1])) urls.add(stripLeadingDotSlash(m[1]));
   }
@@ -113,13 +119,13 @@ function stripLeadingDotSlash(p) {
 // Meditation SW: stub-execute and inspect captured routes
 // ---------------------------------------------------------------------------
 
-function inspectMeditationSw() {
-  const src = readFileSync(join(REPO_ROOT, "_config/sw/meditation.js"), "utf-8");
+function inspectSw(relPath) {
+  const src = readFileSync(join(REPO_ROOT, relPath), "utf-8");
   // The stripper below assumes single-line imports. Fail loudly on a multi-line one.
   const lines = src.split("\n");
   for (let i = 0; i < lines.length; i++) {
     if (/^import\s/.test(lines[i]) && !/;$/.test(lines[i].trim())) {
-      throw new Error(`multi-line import at _config/sw/meditation.js:${i+1} — extend the stripper`);
+      throw new Error(`multi-line import at ${relPath}:${i+1} — extend the stripper`);
     }
   }
   const stripped = src.replace(/^import\s[^;]*;\s*$/gm, "");
@@ -206,11 +212,32 @@ if (hMissing.length) {
   );
 }
 
+// Mnemonics are runtime-cached, not precached. Assert both directions: they must
+// be absent from the precache manifest (keeps the payload lean) AND a SW runtime
+// route must cover them, or a cold-offline wrong answer 404s the image.
+const { routes: hRoutes } = inspectSw("_config/sw/hiragana.js");
+const sampleMnemonic = readdirSync(join(REPO_ROOT, "hiragana/mnemonics")).find(f => f.endsWith(".png"));
+if (!sampleMnemonic) {
+  fail("no mnemonic PNGs found on disk — the mnemonic route assertion can't run.");
+} else {
+  if (hManifestUrls.has(`mnemonics/${sampleMnemonic}`)) {
+    fail(`hiragana: mnemonics/${sampleMnemonic} is in the precache manifest — it should be runtime-cached only (drop it via extraIgnores in _config/build-sw.js).`);
+  }
+  const mnemUrl = new URL(`https://example.com/hiragana/mnemonics/${sampleMnemonic}`);
+  const covered = hRoutes.some(r => {
+    try { return r.matcher({ url: mnemUrl, request: { url: mnemUrl.href }, event: null, sameOrigin: true }); }
+    catch { return false; }
+  });
+  if (!covered) {
+    fail(`hiragana: no SW runtime route matches mnemonics/${sampleMnemonic}. It isn't precached, so offline shows no image on a wrong answer. Add a CacheFirst route in _config/sw/hiragana.js.`);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Part B — Meditation SW strategy
 // ---------------------------------------------------------------------------
 
-const { routes: mRoutes } = inspectMeditationSw();
+const { routes: mRoutes } = inspectSw("_config/sw/meditation.js");
 const sessionUrls = extractSessionUrls();
 const cacheNameInApp = extractAudioCacheName();
 

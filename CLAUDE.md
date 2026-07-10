@@ -23,7 +23,19 @@ Node version: 24 (see `.nvmrc`).
 
 `hiragana/` is an independent React app with a service worker for offline support. It is not part of the Eleventy build — files are served as-is. Dependencies (React, ReactDOM, htm) are vendored locally in `hiragana/vendor/`.
 
-Tailwind CSS is pre-built (no in-browser JIT). `_config/build-tailwind.js` runs as an `eleventy.after` hook before the SW build, invoking the Tailwind CLI with `_config/tailwind/hiragana.css` as input and emitting `_site/hiragana/styles.css`. The input file's `@source` directives point at `hiragana/index.html` and `hiragana/app.js`.
+Tailwind CSS is pre-built (no in-browser JIT). `_config/build-tailwind.js` runs as an `eleventy.after` hook before the SW build, invoking the Tailwind CLI with `_config/tailwind/hiragana.css` as input and emitting `_site/hiragana/styles.css`. Its `@source` directives list every file that carries class names — `hiragana/index.html`, `app.js`, and `views.js`. **Any new file with markup must be added there**, or classes only it uses get purged and the UI ships unstyled.
+
+### Module layout
+
+`app.js` is just the `App` state machine + render. The rest is split out: `model.js` (card catalog — deck/numbers/word cards, `SECTIONS`, `ROWS_BY_ID`, persistence glue), `views.js` (all presentational components), `audio.js` (`useAudio` hook — recorded audio + TTS fallback), `html.js` (shared `htm` bind), `match.js` (`checkAnswer`), plus the pure `srs.js`/`numbers.js`/`words.js`/`romaji.js`/`storage.js`.
+
+### Deck & word data
+
+The kana deck (`hiragana/deck.json`) and word list (`hiragana/words.json`) are data files, imported by `model.js` via `with { type: "json" }` and by the Node tests directly — so there's one source of truth and no regex-scraping of source. `model.js` maps each deck entry `[kana, romaji, alts?]` through `ENTRY_BY_KIND[section.kind]` (`hiragana`/`katakana`/`foreign`) to attach the derived `audioKey`/`hasMnemonic`. Numbers stay generated in code (`numbers.js`, no static table). Both JSON files must be in the SW precache (they are — the glob covers `json`, and `offline.test.js` asserts it), or a cold-offline launch 404s.
+
+Words (`words.js`) derive romaji/alts/`requiredChars` from the deck by scanning the kana into cards (alts via `combineRomaji` in `romaji.js`, shared with numbers); a word is just `{ kana, gloss }`, optionally with a `{ romaji, alts }` override for spellings derivation can't reach. Sokuon (っ/ッ) and long-vowel (ー) are handled inline — they aren't cards and aren't `requiredChars`. Moraic ん before a b/p/m sound also grows a Hepburn `m` alt (しんぶん accepts `shimbun`) with `n` staying canonical. A hiragana word gates on hiragana rows, a katakana word on katakana rows.
+
+Answer grading is `checkAnswer` in `match.js` (pure, unit-tested): normalize (lowercase + strip whitespace), reject prompt-echo as a bypass, match against `answer` or any `alt` (alts lowercased at match time).
 
 ## Meditation PWA
 
@@ -36,6 +48,8 @@ Repo-specific wiring (technique is in the `workbox-pwa` skill):
 - SW sources: `_config/sw/<app>.js` (one per PWA — `hiragana`, `meditation`). Outside the app dirs so Eleventy's passthrough copy doesn't ship them to `_site/`.
 - Build script: `_config/build-sw.js`, runs as an `eleventy.after` hook. Uses `esbuild` to bundle each SW source, substituting `self.__WB_MANIFEST` from `workbox-build`'s `getManifest()`. Output lands at `_site/<app>/sw.js`.
 - Budgets enforced by `_config/build-sw.js`: **10 MB per-PWA precache, 500 KB per-file.** Build fails if exceeded.
+- Both SWs claim clients in an `activate` handler (top-level `self.clients.claim()` throws `InvalidStateError` — it only resolves once activating).
+- Hiragana **mnemonic PNGs are runtime-cached, not precached** — they render only on a wrong answer, so `build-sw.js` excludes `mnemonics/**` (per-app `extraIgnores`) and the SW registers a `CacheFirst` route for them. `offline.test.js` asserts both: absent from the precache manifest, covered by the runtime route.
 - Hiragana persists a lean per-card shape (`{box, lastDay}` keyed by id; static fields rehydrated from code in `storage.js`) to keep localStorage small. Key name: `hiragana-srs` (stable, unversioned); stats under `hiragana-stats`.
 
 ## Vendored Dependencies
@@ -63,8 +77,8 @@ The hiragana app vendors React, ReactDOM, and htm locally in `hiragana/vendor/` 
 These checks run before every deploy:
 
 1. **Lint** (`eslint`) — across all source code.
-2. **Unit tests** — `hiragana/srs.test.js` (Leitner box logic), `hiragana/numbers.test.js` (1–99 composition + alt generation), `hiragana/storage.test.js` (load/hydrate invariants).
+2. **Unit tests** — `hiragana/srs.test.js` (Leitner box logic), `hiragana/numbers.test.js` (1–99 composition + alt generation), `hiragana/storage.test.js` (load/hydrate invariants), `hiragana/words.test.js` (word scan/composition + unlock gate; imports `deck.json` + `words.json` for the real kana deck, so a word referencing an untaught glyph fails here — sokuon `っ`/`ッ`, long-vowel `ー`, and the ん→m Hepburn alt are supported via derivation), `hiragana/match.test.js` (answer grading — case/whitespace/alt/bypass/empty).
 3. **Vendor sync** (`hiragana/vendor/check-updates.js`) — verifies vendored files match the versions in `package.json`.
 4. **Import scan** (`hiragana/vendor/import-scan.test.js`) — fails if any shipped JS module has an absolute-path import (a class of regression that resolves against the page origin and 404s in production).
 5. **Build** (`npm run build`) — runs Eleventy + the Workbox SW generator. The SW build enforces the per-PWA precache budget (10 MB), per-file limit (500 KB), and auto-detects new shipped assets via `getManifest()`.
-6. **Offline coverage** (`_config/sw/offline.test.js`) — asserts every runtime-fetched hiragana URL (audio, mnemonics, shell) is in the precache manifest, and that the meditation SW caches cross-origin audio correctly. Runs after the build.
+6. **Offline coverage** (`_config/sw/offline.test.js`) — asserts every precached hiragana URL (audio, data files, shell) is in the manifest, that mnemonics are *out* of the precache but covered by a SW runtime route, and that the meditation SW caches cross-origin audio correctly. Runs after the build.

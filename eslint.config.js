@@ -5,7 +5,7 @@ import globals from "globals";
 export default [
   js.configs.recommended,
   {
-    files: ["hiragana/app.js"],
+    files: ["hiragana/app.js", "hiragana/views.js", "hiragana/audio.js", "hiragana/model.js", "hiragana/html.js"],
     plugins: { "react-hooks": reactHooks },
     rules: {
       ...reactHooks.configs.recommended.rules,

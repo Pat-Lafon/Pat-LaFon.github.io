@@ -101,6 +101,23 @@ test("pickNext prefers the lowest box (least-known / just-flubbed) first", () =>
     assert.equal(pickNext(cards, TODAY, ["vowels"]).id, "あ");
   }
 });
+test("pickNext skips cards the isAvailable predicate rejects", () => {
+  const cards = {
+    "あ": card({ id: "あ", rowId: "vowels", box: 1 }),
+    "word-x": card({ id: "word-x", rowId: "words", box: 1 }),
+  };
+  const availableUnlessWord = (c) => c.rowId !== "words";
+  for (let i = 0; i < 20; i++) {
+    assert.equal(pickNext(cards, TODAY, ["vowels", "words"], undefined, availableUnlessWord).id, "あ");
+  }
+  // With the word available it's a legal pick (lowest-box tier includes both).
+  const alwaysAvailable = () => true;
+  const seen = new Set();
+  for (let i = 0; i < 40; i++) {
+    seen.add(pickNext(cards, TODAY, ["vowels", "words"], undefined, alwaysAvailable).id);
+  }
+  assert.ok(seen.has("word-x"), "word should be pickable when available");
+});
 
 console.log(`PASS: ${passed} SRS tests`);
 assert.equal(LEARNED_BOX, 3);

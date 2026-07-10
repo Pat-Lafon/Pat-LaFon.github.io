@@ -10,7 +10,9 @@ import { CacheableResponsePlugin } from "workbox-cacheable-response";
 self.addEventListener("message", (e) => {
   if (e.data?.type === "SKIP_WAITING") self.skipWaiting();
 });
-self.clients.claim();
+// clients.claim() only resolves once the worker is activating — calling it at
+// top-level eval throws InvalidStateError and does nothing.
+self.addEventListener("activate", (e) => e.waitUntil(self.clients.claim()));
 cleanupOutdatedCaches();
 
 precacheAndRoute(self.__WB_MANIFEST);
