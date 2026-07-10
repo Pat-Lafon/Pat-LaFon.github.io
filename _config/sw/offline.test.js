@@ -52,8 +52,10 @@ function hiraganaExpectedUrls() {
   const app = readFileSync(join(REPO_ROOT, "hiragana/app.js"), "utf-8");
   const html = readFileSync(join(REPO_ROOT, "hiragana/index.html"), "utf-8");
 
-  // Audio: kanaEntry("kana","romaji"[, [alts]]) calls in SECTIONS → audio/{romaji}.m4a
-  const pairs = [...app.matchAll(/kanaEntry\("([^"]+)","([^"]+)"(?:,\s*\[[^\]]*\])?\)/g)].map(m => [m[1], m[2]]);
+  // Audio: kanaEntry/kataEntry("kana","romaji"[, [alts]]) calls in SECTIONS →
+  // audio/{romaji}.m4a. foreignEntry is deliberately excluded — those cards have
+  // audioKey:null and fall back to TTS, so no recording exists to precache.
+  const pairs = [...app.matchAll(/(?:kanaEntry|kataEntry)\("([^"]+)","([^"]+)"(?:,\s*\[[^\]]*\])?\)/g)].map(m => [m[1], m[2]]);
 
   // Mnemonics: the app fetches mnemonics/{answer}.png optimistically and hides
   // misses via onError, so the invariant is that every mnemonic file that

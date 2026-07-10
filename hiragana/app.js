@@ -23,8 +23,23 @@ const preventBlur = (e) => e.preventDefault();
 
 function kanaEntry(kana, romaji, alts = []) {
   // reading null: the glyph is its own prompt, so nothing extra to reveal. audioKey
-  // = romaji since kana audio files are named by romaji (audio/ka.m4a).
-  return { id: kana, front: kana, answer: romaji, alts, reading: null, audioKey: romaji };
+  // = romaji since kana audio files are named by romaji (audio/ka.m4a). hasMnemonic:
+  // the mnemonics/ pngs teach the hiragana shape, so only hiragana cards claim one.
+  return { id: kana, front: kana, answer: romaji, alts, reading: null, audioKey: romaji, hasMnemonic: true };
+}
+
+// Katakana base: same sound — and thus same audio/{romaji}.m4a — as its hiragana
+// twin, but a distinct glyph the hiragana mnemonic wouldn't match.
+function kataEntry(kana, romaji, alts = []) {
+  return { id: kana, front: kana, answer: romaji, alts, reading: null, audioKey: romaji, hasMnemonic: false };
+}
+
+// Extended katakana for foreign sounds (ファ, ヴ, チェ …). No recording exists, so
+// audioKey is null and speak() falls back to on-device TTS. A distinct constructor
+// from kanaEntry/kataEntry so the offline test's audio scan doesn't demand a
+// nonexistent audio/{romaji}.m4a — see _config/sw/offline.test.js.
+function foreignEntry(kana, romaji, alts = []) {
+  return { id: kana, front: kana, answer: romaji, alts, reading: null, audioKey: null, hasMnemonic: false };
 }
 
 const COMPOUND_SAMPLER = [11, 14, 17, 19, 25, 34, 47, 56, 63, 79, 88, 99];
@@ -62,6 +77,48 @@ const SECTIONS = [
     ],
   },
   {
+    name: "Katakana",
+    rows: [
+      { id: "kata-vowels", label: "Vowels",             entries: [kataEntry("ア","a"),kataEntry("イ","i"),kataEntry("ウ","u"),kataEntry("エ","e"),kataEntry("オ","o")] },
+      { id: "kata-k",      label: "K-row",              entries: [kataEntry("カ","ka"),kataEntry("キ","ki"),kataEntry("ク","ku"),kataEntry("ケ","ke"),kataEntry("コ","ko")] },
+      { id: "kata-s",      label: "S-row",              entries: [kataEntry("サ","sa"),kataEntry("シ","shi"),kataEntry("ス","su"),kataEntry("セ","se"),kataEntry("ソ","so")] },
+      { id: "kata-t",      label: "T-row",              entries: [kataEntry("タ","ta"),kataEntry("チ","chi"),kataEntry("ツ","tsu"),kataEntry("テ","te"),kataEntry("ト","to")] },
+      { id: "kata-n",      label: "N-row",              entries: [kataEntry("ナ","na"),kataEntry("ニ","ni"),kataEntry("ヌ","nu"),kataEntry("ネ","ne"),kataEntry("ノ","no")] },
+      { id: "kata-h",      label: "H-row",              entries: [kataEntry("ハ","ha"),kataEntry("ヒ","hi"),kataEntry("フ","fu",["hu"]),kataEntry("ヘ","he"),kataEntry("ホ","ho")] },
+      { id: "kata-m",      label: "M-row",              entries: [kataEntry("マ","ma"),kataEntry("ミ","mi"),kataEntry("ム","mu"),kataEntry("メ","me"),kataEntry("モ","mo")] },
+      { id: "kata-y",      label: "Y-row",              entries: [kataEntry("ヤ","ya"),kataEntry("ユ","yu"),kataEntry("ヨ","yo")] },
+      { id: "kata-r",      label: "R-row",              entries: [kataEntry("ラ","ra"),kataEntry("リ","ri"),kataEntry("ル","ru"),kataEntry("レ","re"),kataEntry("ロ","ro")] },
+      { id: "kata-w",      label: "W-row + n",          entries: [kataEntry("ワ","wa"),kataEntry("ヲ","wo",["o"]),kataEntry("ン","n")] },
+      { id: "kata-g",      label: "G-row (dakuten)",    entries: [kataEntry("ガ","ga"),kataEntry("ギ","gi"),kataEntry("グ","gu"),kataEntry("ゲ","ge"),kataEntry("ゴ","go")] },
+      { id: "kata-z",      label: "Z-row (dakuten)",    entries: [kataEntry("ザ","za"),kataEntry("ジ","ji"),kataEntry("ズ","zu"),kataEntry("ゼ","ze"),kataEntry("ゾ","zo")] },
+      { id: "kata-d",      label: "D-row (dakuten)",    entries: [kataEntry("ダ","da"),kataEntry("ヂ","di",["ji"]),kataEntry("ヅ","du",["zu"]),kataEntry("デ","de"),kataEntry("ド","do")] },
+      { id: "kata-b",      label: "B-row (dakuten)",    entries: [kataEntry("バ","ba"),kataEntry("ビ","bi"),kataEntry("ブ","bu"),kataEntry("ベ","be"),kataEntry("ボ","bo")] },
+      { id: "kata-p",      label: "P-row (handakuten)", entries: [kataEntry("パ","pa"),kataEntry("ピ","pi"),kataEntry("プ","pu"),kataEntry("ペ","pe"),kataEntry("ポ","po")] },
+      { id: "kata-ky",     label: "Ky-combo",           entries: [kataEntry("キャ","kya"),kataEntry("キュ","kyu"),kataEntry("キョ","kyo")] },
+      { id: "kata-sh",     label: "Sh-combo",           entries: [kataEntry("シャ","sha"),kataEntry("シュ","shu"),kataEntry("ショ","sho")] },
+      { id: "kata-ch",     label: "Ch-combo",           entries: [kataEntry("チャ","cha"),kataEntry("チュ","chu"),kataEntry("チョ","cho")] },
+      { id: "kata-ny",     label: "Ny-combo",           entries: [kataEntry("ニャ","nya"),kataEntry("ニュ","nyu"),kataEntry("ニョ","nyo")] },
+      { id: "kata-hy",     label: "Hy-combo",           entries: [kataEntry("ヒャ","hya"),kataEntry("ヒュ","hyu"),kataEntry("ヒョ","hyo")] },
+      { id: "kata-my",     label: "My-combo",           entries: [kataEntry("ミャ","mya"),kataEntry("ミュ","myu"),kataEntry("ミョ","myo")] },
+      { id: "kata-ry",     label: "Ry-combo",           entries: [kataEntry("リャ","rya"),kataEntry("リュ","ryu"),kataEntry("リョ","ryo")] },
+      { id: "kata-gy",     label: "Gy-combo",           entries: [kataEntry("ギャ","gya"),kataEntry("ギュ","gyu"),kataEntry("ギョ","gyo")] },
+      { id: "kata-jy",     label: "J-combo",            entries: [kataEntry("ジャ","ja"),kataEntry("ジュ","ju"),kataEntry("ジョ","jo")] },
+      { id: "kata-by",     label: "By-combo",           entries: [kataEntry("ビャ","bya"),kataEntry("ビュ","byu"),kataEntry("ビョ","byo")] },
+      { id: "kata-py",     label: "Py-combo",           entries: [kataEntry("ピャ","pya"),kataEntry("ピュ","pyu"),kataEntry("ピョ","pyo")] },
+    ],
+  },
+  {
+    name: "Katakana — extended",
+    rows: [
+      { id: "kata-ext-f",  label: "F-row (foreign)",       entries: [foreignEntry("ファ","fa"),foreignEntry("フィ","fi"),foreignEntry("フェ","fe"),foreignEntry("フォ","fo")] },
+      { id: "kata-ext-v",  label: "V-row (foreign)",       entries: [foreignEntry("ヴ","vu"),foreignEntry("ヴァ","va"),foreignEntry("ヴィ","vi"),foreignEntry("ヴェ","ve"),foreignEntry("ヴォ","vo")] },
+      { id: "kata-ext-w",  label: "W-row (foreign)",       entries: [foreignEntry("ウィ","wi"),foreignEntry("ウェ","we"),foreignEntry("ウォ","wo")] },
+      { id: "kata-ext-td", label: "T/D-row (foreign)",     entries: [foreignEntry("ティ","ti"),foreignEntry("ディ","di"),foreignEntry("トゥ","tu"),foreignEntry("ドゥ","du")] },
+      { id: "kata-ext-j",  label: "Ch/Sh/J (foreign)",     entries: [foreignEntry("チェ","che"),foreignEntry("シェ","she"),foreignEntry("ジェ","je")] },
+      { id: "kata-ext-ts", label: "Ts-row + ye (foreign)", entries: [foreignEntry("ツァ","tsa"),foreignEntry("ツィ","tsi"),foreignEntry("ツェ","tse"),foreignEntry("ツォ","tso"),foreignEntry("イェ","ye")] },
+    ],
+  },
+  {
     name: "Numbers",
     rows: [
       { id: "num-1-10",     label: "Numbers 1–10",                entries: Array.from({ length: 10 }, (_, i) => numberEntry(i + 1)) },
@@ -75,7 +132,7 @@ const SECTIONS = [
 export const ROWS_BY_ID = Object.fromEntries(
   SECTIONS.flatMap(s => s.rows).flatMap(row => row.entries.map(e => [e.id, {
     front: e.front, answer: e.answer, alts: e.alts,
-    reading: e.reading, audioKey: e.audioKey, rowId: row.id,
+    reading: e.reading, audioKey: e.audioKey, hasMnemonic: e.hasMnemonic, rowId: row.id,
   }]))
 );
 
@@ -295,7 +352,7 @@ export function App() {
       <div class="relative max-w-2xl w-full mx-auto px-5 pt-4 pb-3 flex-1 flex flex-col min-h-0">
         <header class="flex items-center justify-between mb-3 flex-shrink-0">
           <h1 class="text-base text-stone-900" style=${{ fontWeight: 500, letterSpacing: "-0.01em" }}>
-            ひらがな <span class="text-stone-400 mx-0.5">·</span> <span class="italic text-stone-600 text-sm">hiragana</span>
+            かな <span class="text-stone-400 mx-0.5">·</span> <span class="italic text-stone-600 text-sm">kana</span>
           </h1>
           <button
             onClick=${() => setShowSettings(s => !s)}
@@ -424,7 +481,7 @@ function PracticeView({ current, input, setInput, revealed, feedback, handleSubm
                 <div class="text-xs italic text-stone-500 mt-2">
                   you typed "${input}"
                 </div>
-                ${!mnemonicFailed && html`
+                ${current.hasMnemonic && !mnemonicFailed && html`
                   <img
                     src=${`./mnemonics/${current.answer}.png`}
                     alt=${`Mnemonic for ${current.front}`}
