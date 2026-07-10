@@ -29,23 +29,15 @@ function card({ id, rowId = "vowels", box = 1, lastDay = null }) {
 }
 
 // --- applyGrade ---
-test("applyGrade(0) resets to box 1", () => {
-  assert.equal(applyGrade(card({ id: "か", rowId: "k", box: 4, lastDay: YESTERDAY }), 0, TODAY).box, 1);
+test("applyGrade(wrong) resets to box 1", () => {
+  assert.equal(applyGrade(card({ id: "か", rowId: "k", box: 4, lastDay: YESTERDAY }), false, TODAY).box, 1);
 });
-test("applyGrade(1) demotes one box, floored at 1", () => {
-  assert.equal(applyGrade({ box: 3 }, 1, TODAY).box, 2);
-  assert.equal(applyGrade({ box: 1 }, 1, TODAY).box, 1);
-});
-test("applyGrade(2) promotes one box, capped at MAX_BOX", () => {
-  assert.equal(applyGrade({ box: 2 }, 2, TODAY).box, 3);
-  assert.equal(applyGrade({ box: MAX_BOX }, 2, TODAY).box, MAX_BOX);
-});
-test("applyGrade(3) promotes two boxes, capped at MAX_BOX", () => {
-  assert.equal(applyGrade({ box: 2 }, 3, TODAY).box, 4);
-  assert.equal(applyGrade({ box: MAX_BOX - 1 }, 3, TODAY).box, MAX_BOX);
+test("applyGrade(correct) promotes one box, capped at MAX_BOX", () => {
+  assert.equal(applyGrade({ box: 2 }, true, TODAY).box, 3);
+  assert.equal(applyGrade({ box: MAX_BOX }, true, TODAY).box, MAX_BOX);
 });
 test("applyGrade stamps today on lastDay", () => {
-  assert.equal(applyGrade({ box: 1, lastDay: null }, 2, TODAY).lastDay, TODAY);
+  assert.equal(applyGrade({ box: 1, lastDay: null }, true, TODAY).lastDay, TODAY);
 });
 
 // --- isDoneToday ---

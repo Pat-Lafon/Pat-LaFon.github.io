@@ -20,7 +20,7 @@ function makeStorage(init = {}) {
 }
 
 const LOOKUP = {
-  "あ": { kana: "あ", romaji: "a", rowId: "vowels", kind: "kana", prompt: null, alts: null },
+  "あ": { front: "あ", answer: "a", alts: [], reading: null, audioKey: "a", rowId: "vowels" },
 };
 
 // 1. Returning users on the current lean shape keep box + last-answered day.
@@ -34,32 +34,19 @@ test("loadState reads the current {box, lastDay} shape", () => {
   const loaded = loadState(storage, LOOKUP);
   assert.equal(loaded.cards["あ"].box, 4);
   assert.equal(loaded.cards["あ"].lastDay, "2026-07-07");
-  assert.equal(loaded.cards["あ"].romaji, "a"); // static field rehydrated from LOOKUP
+  assert.equal(loaded.cards["あ"].answer, "a"); // static field rehydrated from LOOKUP
 });
 
-// 2. Pre-daily review-count users keep their box; the day resets to null.
-test("loadState migrates pre-daily {box, lastReviewedAt}→{box, lastDay:null}", () => {
+// 2. A card with a box but no lastDay (e.g. reset day) loads with lastDay null.
+test("loadState defaults a missing lastDay to null", () => {
   const storage = makeStorage({
     [STORAGE_KEY]: JSON.stringify({
       enabledRows: ["vowels"],
-      cards: { "あ": { box: 4, lastReviewedAt: 20 } },
-      reviewCount: 100,
+      cards: { "あ": { box: 4 } },
     }),
   });
   const loaded = loadState(storage, LOOKUP);
   assert.equal(loaded.cards["あ"].box, 4);
-  assert.equal(loaded.cards["あ"].lastDay, null);
-});
-
-// 3. Even older users (pre-Leitner SM-2 shape) must not lose progress.
-test("loadState migrates pre-Leitner SM-2 reps→box", () => {
-  const storage = makeStorage({
-    [STORAGE_KEY]: JSON.stringify({
-      cards: { "あ": { kana: "あ", romaji: "a", rowId: "vowels", reps: 3, ease: 2.5 } },
-    }),
-  });
-  const loaded = loadState(storage, LOOKUP);
-  assert.equal(loaded.cards["あ"].box, 4); // min(5, max(1, 3+1))
   assert.equal(loaded.cards["あ"].lastDay, null);
 });
 

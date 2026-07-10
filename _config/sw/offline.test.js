@@ -18,7 +18,7 @@
 // Known gaps (intentionally not enforced here):
 //   - External URL liveness (audio hosts going dead) — separate concern.
 
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join, relative } from "node:path";
 
@@ -52,22 +52,17 @@ function hiraganaExpectedUrls() {
   const app = readFileSync(join(REPO_ROOT, "hiragana/app.js"), "utf-8");
   const html = readFileSync(join(REPO_ROOT, "hiragana/index.html"), "utf-8");
 
-  // Audio: kanaEntry("kana","romaji") calls in SECTIONS → audio/{romaji}.m4a
-  const pairs = [...app.matchAll(/kanaEntry\("([^"]+)","([^"]+)"\)/g)].map(m => [m[1], m[2]]);
-  const kanaToRomaji = Object.fromEntries(pairs);
+  // Audio: kanaEntry("kana","romaji"[, [alts]]) calls in SECTIONS → audio/{romaji}.m4a
+  const pairs = [...app.matchAll(/kanaEntry\("([^"]+)","([^"]+)"(?:,\s*\[[^\]]*\])?\)/g)].map(m => [m[1], m[2]]);
 
-  // Mnemonics: "kana" entries in HAS_MNEMONIC Set → mnemonics/{KANA_TO_ROMAJI[kana]}.png
-  const mnemBlock = app.match(/const\s+HAS_MNEMONIC\s*=\s*new\s+Set\(\[([\s\S]*?)\]\);/);
-  if (!mnemBlock) throw new Error("could not find HAS_MNEMONIC in hiragana/app.js");
-  const mnemKanas = [...mnemBlock[1].matchAll(/"([^"]+)"/g)].map(m => m[1]);
+  // Mnemonics: the app fetches mnemonics/{answer}.png optimistically and hides
+  // misses via onError, so the invariant is that every mnemonic file that
+  // exists is precached for offline. Derive the set from the files on disk.
+  const mnemFiles = readdirSync(join(REPO_ROOT, "hiragana/mnemonics")).filter(f => f.endsWith(".png"));
 
   const urls = new Set();
   for (const [, r] of pairs) urls.add(`audio/${r}.m4a`);
-  for (const k of mnemKanas) {
-    const r = kanaToRomaji[k];
-    if (!r) throw new Error(`HAS_MNEMONIC contains "${k}" but no romaji found in ROWS`);
-    urls.add(`mnemonics/${r}.png`);
-  }
+  for (const f of mnemFiles) urls.add(`mnemonics/${f}`);
 
   // index.html: same-origin script src, importmap entries, manifest, icons.
   // Skip cross-origin scripts (Tailwind CDN) — those are handled by a

@@ -21,29 +21,31 @@ const html = htm.bind(React.createElement);
 // input, which on iOS dismisses the keyboard and lurches the card.
 const preventBlur = (e) => e.preventDefault();
 
-function kanaEntry(kana, romaji) {
-  return { id: kana, kana, romaji, prompt: null, alts: null };
+function kanaEntry(kana, romaji, alts = []) {
+  // reading null: the glyph is its own prompt, so nothing extra to reveal. audioKey
+  // = romaji since kana audio files are named by romaji (audio/ka.m4a).
+  return { id: kana, front: kana, answer: romaji, alts, reading: null, audioKey: romaji };
 }
 
 const COMPOUND_SAMPLER = [11, 14, 17, 19, 25, 34, 47, 56, 63, 79, 88, 99];
 
 const SECTIONS = [
   {
-    name: "Hiragana", kind: "kana",
+    name: "Hiragana",
     rows: [
       { id: "vowels", label: "Vowels",             entries: [kanaEntry("あ","a"),kanaEntry("い","i"),kanaEntry("う","u"),kanaEntry("え","e"),kanaEntry("お","o")] },
       { id: "k",      label: "K-row",              entries: [kanaEntry("か","ka"),kanaEntry("き","ki"),kanaEntry("く","ku"),kanaEntry("け","ke"),kanaEntry("こ","ko")] },
       { id: "s",      label: "S-row",              entries: [kanaEntry("さ","sa"),kanaEntry("し","shi"),kanaEntry("す","su"),kanaEntry("せ","se"),kanaEntry("そ","so")] },
       { id: "t",      label: "T-row",              entries: [kanaEntry("た","ta"),kanaEntry("ち","chi"),kanaEntry("つ","tsu"),kanaEntry("て","te"),kanaEntry("と","to")] },
       { id: "n",      label: "N-row",              entries: [kanaEntry("な","na"),kanaEntry("に","ni"),kanaEntry("ぬ","nu"),kanaEntry("ね","ne"),kanaEntry("の","no")] },
-      { id: "h",      label: "H-row",              entries: [kanaEntry("は","ha"),kanaEntry("ひ","hi"),kanaEntry("ふ","fu"),kanaEntry("へ","he"),kanaEntry("ほ","ho")] },
+      { id: "h",      label: "H-row",              entries: [kanaEntry("は","ha"),kanaEntry("ひ","hi"),kanaEntry("ふ","fu",["hu"]),kanaEntry("へ","he"),kanaEntry("ほ","ho")] },
       { id: "m",      label: "M-row",              entries: [kanaEntry("ま","ma"),kanaEntry("み","mi"),kanaEntry("む","mu"),kanaEntry("め","me"),kanaEntry("も","mo")] },
       { id: "y",      label: "Y-row",              entries: [kanaEntry("や","ya"),kanaEntry("ゆ","yu"),kanaEntry("よ","yo")] },
       { id: "r",      label: "R-row",              entries: [kanaEntry("ら","ra"),kanaEntry("り","ri"),kanaEntry("る","ru"),kanaEntry("れ","re"),kanaEntry("ろ","ro")] },
-      { id: "w",      label: "W-row + n",          entries: [kanaEntry("わ","wa"),kanaEntry("を","wo"),kanaEntry("ん","n")] },
+      { id: "w",      label: "W-row + n",          entries: [kanaEntry("わ","wa"),kanaEntry("を","wo",["o"]),kanaEntry("ん","n")] },
       { id: "g",      label: "G-row (dakuten)",    entries: [kanaEntry("が","ga"),kanaEntry("ぎ","gi"),kanaEntry("ぐ","gu"),kanaEntry("げ","ge"),kanaEntry("ご","go")] },
       { id: "z",      label: "Z-row (dakuten)",    entries: [kanaEntry("ざ","za"),kanaEntry("じ","ji"),kanaEntry("ず","zu"),kanaEntry("ぜ","ze"),kanaEntry("ぞ","zo")] },
-      { id: "d",      label: "D-row (dakuten)",    entries: [kanaEntry("だ","da"),kanaEntry("ぢ","di"),kanaEntry("づ","du"),kanaEntry("で","de"),kanaEntry("ど","do")] },
+      { id: "d",      label: "D-row (dakuten)",    entries: [kanaEntry("だ","da"),kanaEntry("ぢ","di",["ji"]),kanaEntry("づ","du",["zu"]),kanaEntry("で","de"),kanaEntry("ど","do")] },
       { id: "b",      label: "B-row (dakuten)",    entries: [kanaEntry("ば","ba"),kanaEntry("び","bi"),kanaEntry("ぶ","bu"),kanaEntry("べ","be"),kanaEntry("ぼ","bo")] },
       { id: "p",      label: "P-row (handakuten)", entries: [kanaEntry("ぱ","pa"),kanaEntry("ぴ","pi"),kanaEntry("ぷ","pu"),kanaEntry("ぺ","pe"),kanaEntry("ぽ","po")] },
       { id: "ky",     label: "Ky-combo",           entries: [kanaEntry("きゃ","kya"),kanaEntry("きゅ","kyu"),kanaEntry("きょ","kyo")] },
@@ -60,7 +62,7 @@ const SECTIONS = [
     ],
   },
   {
-    name: "Numbers", kind: "number",
+    name: "Numbers",
     rows: [
       { id: "num-1-10",     label: "Numbers 1–10",                entries: Array.from({ length: 10 }, (_, i) => numberEntry(i + 1)) },
       { id: "num-tens",     label: "Tens (20–90)",                entries: [20,30,40,50,60,70,80,90].map(numberEntry) },
@@ -69,21 +71,12 @@ const SECTIONS = [
   },
 ];
 
-// Flat row list for consumers that don't need section grouping.
-const ROWS = SECTIONS.flatMap(s =>
-  s.rows.map(r => ({ ...r, section: s.name, kind: s.kind }))
-);
-
 // id → static card fields; hydrateCard rebuilds full cards from these.
 export const ROWS_BY_ID = Object.fromEntries(
-  ROWS.flatMap(row => row.entries.map(e => [e.id, {
-    kana: e.kana, romaji: e.romaji, rowId: row.id,
-    kind: row.kind, prompt: e.prompt, alts: e.alts,
+  SECTIONS.flatMap(s => s.rows).flatMap(row => row.entries.map(e => [e.id, {
+    front: e.front, answer: e.answer, alts: e.alts,
+    reading: e.reading, audioKey: e.audioKey, rowId: row.id,
   }]))
-);
-
-const KANA_TO_ROMAJI = Object.fromEntries(
-  Object.values(ROWS_BY_ID).filter(f => f.kind === "kana").map(f => [f.kana, f.romaji]),
 );
 
 const DEFAULT_ENABLED = ["vowels", "k"];
@@ -91,21 +84,6 @@ const DEFAULT_ENABLED = ["vowels", "k"];
 function todayKey() {
   return new Date().toISOString().slice(0, 10);
 }
-
-const ALT_ROMAJI = { "ぢ": ["ji"], "づ": ["zu"], "ふ": ["hu"], "を": ["o"] };
-
-const HAS_MNEMONIC = new Set([
-  "あ", "い", "う", "え", "お",
-  "か", "き", "く", "け", "こ",
-  "さ", "し", "す", "せ", "そ",
-  "た", "ち", "つ", "て", "と",
-  "な", "に", "ぬ", "ね", "の",
-  "は", "ひ", "ふ", "へ", "ほ",
-  "ま", "み", "む", "め", "も",
-  "や", "ゆ", "よ",
-  "ら", "り", "る", "れ", "ろ",
-  "わ", "を", "ん",
-]);
 
 // Pin the app to the keyboard-visible region: `height` shrinks the container into
 // it, `offsetTop` cancels the pan iOS applies when focusing the bottom input (which
@@ -207,18 +185,16 @@ export function App() {
 
   const audioPool = useRef(new Map());
   function speak(card) {
-    // Number cards have no per-syllable audio file (e.g. "にじゅういち"), so use TTS.
     if (!card) return;
-    if (card.kind === "number") { speakViaTTS(card.kana); return; }
-    const romaji = KANA_TO_ROMAJI[card.kana];
-    if (!romaji) { speakViaTTS(card.kana); return; }
-    let audio = audioPool.current.get(romaji);
+    // No pre-recorded file (numbers, words) → speak the kana reading via TTS.
+    if (!card.audioKey) { speakViaTTS(card.reading ?? card.front); return; }
+    let audio = audioPool.current.get(card.audioKey);
     if (!audio) {
-      audio = new Audio(`./audio/${romaji}.m4a`);
-      audioPool.current.set(romaji, audio);
+      audio = new Audio(`./audio/${card.audioKey}.m4a`);
+      audioPool.current.set(card.audioKey, audio);
     }
     audio.currentTime = 0;
-    audio.play().catch(() => speakViaTTS(card.kana));
+    audio.play().catch(() => speakViaTTS(card.reading ?? card.front));
   }
 
   function speakViaTTS(text) {
@@ -237,32 +213,15 @@ export function App() {
     // Strip whitespace + lowercase so "ni juu ichi" matches "nijuuichi".
     const guess = input.toLowerCase().replace(/\s+/g, "");
     if (!guess) return;
-    // Refuse pure digits on number cards — typing "21" would bypass recall.
-    const digitBypass = current.kind === "number" && /^\d+$/.test(guess);
-    const altsForKana = ALT_ROMAJI[current.kana] || [];
-    const cardAlts = current.alts || [];
-    const correct = !digitBypass && (
-      guess === current.romaji.toLowerCase()
-      || altsForKana.includes(guess)
-      || cardAlts.includes(guess)
+    // Reject echoing the prompt itself (e.g. "21" on a number card) — that bypasses recall.
+    const bypass = guess === current.front.toLowerCase().replace(/\s+/g, "");
+    const correct = !bypass && (
+      guess === current.answer.toLowerCase() || (current.alts || []).includes(guess)
     );
-    setFeedback({ correct, answer: current.romaji });
+    setFeedback({ correct, answer: current.answer });
     setStats((s) => ({ ...s, reviewed: s.reviewed + 1, correct: s.correct + (correct ? 1 : 0) }));
     speak(current);
-    if (!correct) {
-      const updated = applyGrade(current, 0, today);
-      setCards((prev) => ({ ...prev, [current.id]: updated }));
-    }
-  }
-
-  function grade(quality, card = current) {
-    if (!card) return;
-    const updated = applyGrade(card, quality, today);
-    const newCards = { ...cards, [card.id]: updated };
-    setCards((prev) => ({ ...prev, [card.id]: updated }));
-    setCurrent(pickNext(newCards));
-    setFeedback(null);
-    setInput("");
+    setCards((prev) => ({ ...prev, [current.id]: applyGrade(current, correct, today) }));
   }
 
   function nextCard() {
@@ -283,7 +242,7 @@ export function App() {
 
   useEffect(() => {
     function onKey(e) {
-      if (e.key === "Enter" && feedback && !feedback.correct) {
+      if (e.key === "Enter" && feedback) {
         e.preventDefault();
         nextCardRef.current();
       }
@@ -364,7 +323,6 @@ export function App() {
               revealed=${revealed}
               feedback=${feedback}
               handleSubmit=${handleSubmit}
-              grade=${grade}
               nextCard=${nextCard}
               speak=${speak}
               inputRef=${inputRef}
@@ -381,7 +339,7 @@ export function App() {
   `;
 }
 
-function PracticeView({ current, input, setInput, revealed, feedback, handleSubmit, grade, nextCard, speak, inputRef, remaining, learnedCount, totalCount, accuracy, stats, viewportHeight }) {
+function PracticeView({ current, input, setInput, revealed, feedback, handleSubmit, nextCard, speak, inputRef, remaining, learnedCount, totalCount, accuracy, stats, viewportHeight }) {
   const [mnemonicFailed, setMnemonicFailed] = useState(false);
 
   // Keep the input focused across reveals: if it blurs, iOS dismisses the keyboard,
@@ -437,7 +395,7 @@ function PracticeView({ current, input, setInput, revealed, feedback, handleSubm
               cursor: revealed ? "pointer" : "default",
               transition: "font-size 0.25s ease",
             }}
-          >${current.prompt ?? current.kana}</div>
+          >${current.front}</div>
 
           ${feedback && html`
             <div class="text-center mt-3" style=${{ animation: "fadeIn 0.25s ease-out" }}>
@@ -457,19 +415,19 @@ function PracticeView({ current, input, setInput, revealed, feedback, handleSubm
                   <${SpeakerIcon} />
                 </button>
               </div>
-              ${current.kind === "number" && html`
+              ${current.reading && current.reading !== current.front && html`
                 <div class="text-sm italic text-stone-600 mt-1" style=${{ fontFamily: "'Hiragino Mincho ProN', 'Yu Mincho', serif" }}>
-                  ${current.kana}
+                  ${current.reading}
                 </div>
               `}
               ${isWrong && html`
                 <div class="text-xs italic text-stone-500 mt-2">
                   you typed "${input}"
                 </div>
-                ${HAS_MNEMONIC.has(current.kana) && !mnemonicFailed && html`
+                ${!mnemonicFailed && html`
                   <img
-                    src=${`./mnemonics/${KANA_TO_ROMAJI[current.kana]}.png`}
-                    alt=${`Mnemonic for ${current.kana}`}
+                    src=${`./mnemonics/${current.answer}.png`}
+                    alt=${`Mnemonic for ${current.front}`}
                     loading="lazy"
                     onError=${() => setMnemonicFailed(true)}
                     class="mt-3 rounded-lg shadow-sm"
@@ -483,26 +441,14 @@ function PracticeView({ current, input, setInput, revealed, feedback, handleSubm
       </div>
 
       <div class="mt-3 flex-shrink-0 relative">
-        ${revealed && (isWrong
-          ? html`<button
-              onClick=${nextCard}
-              onMouseDown=${preventBlur}
-              class="w-full py-3 text-sm tracking-[0.3em] uppercase text-white transition-colors"
-              style=${{ backgroundColor: accent, fontFamily: "inherit" }}
-            >
-              Continue ↵
-            </button>`
-          : html`<div>
-              <div class="text-center text-[9px] tracking-[0.3em] uppercase text-stone-500 mb-2">
-                How well did you know it?
-              </div>
-              <div class="grid grid-cols-4 gap-2">
-                <${GradeButton} label="Forgot"   sub="box 1" onClick=${() => grade(0)} color="#9c2a1f" />
-                <${GradeButton} label="Slow"     sub="−1"    onClick=${() => grade(1)} color="#7a5a2e" />
-                <${GradeButton} label="Recalled" sub="+1"    onClick=${() => grade(2)} color="#3a5a3a" />
-                <${GradeButton} label="Instant"  sub="+2"    onClick=${() => grade(3)} color="#2e4f6e" />
-              </div>
-            </div>`)}
+        ${revealed && html`<button
+            onClick=${nextCard}
+            onMouseDown=${preventBlur}
+            class="w-full py-3 text-sm tracking-[0.3em] uppercase text-white transition-colors"
+            style=${{ backgroundColor: isCorrect ? "#3a5a3a" : accent, fontFamily: "inherit" }}
+          >
+            Continue ↵
+          </button>`}
         <form
           onSubmit=${handleSubmit}
           aria-hidden=${revealed}
@@ -556,20 +502,6 @@ function DoneView({ reviewed, accuracy, learnedCount, totalCount }) {
   `;
 }
 
-function GradeButton({ label, sub, onClick, color }) {
-  return html`
-    <button
-      onClick=${onClick}
-      onMouseDown=${preventBlur}
-      aria-label=${`${label}, ${sub}`}
-      class="py-3 px-2 border border-stone-300 hover:border-stone-700 transition-all bg-white/40 hover:bg-white/70 group"
-    >
-      <div class="text-sm" style=${{ color, fontWeight: 500 }}>${label}</div>
-      <div class="text-[9px] tracking-widest uppercase text-stone-500 mt-0.5">${sub}</div>
-    </button>
-  `;
-}
-
 function SpeakerIcon() {
   return html`
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -581,8 +513,7 @@ function SpeakerIcon() {
 }
 
 function rowPreview(row) {
-  // kana cards have prompt: null; number cards have prompt: "21".
-  return row.entries.map(e => e.prompt ?? e.kana).join(" ");
+  return row.entries.map(e => e.front).join(" ");
 }
 
 function SettingsView({ enabledRows, toggleRow, cards, onReset, learnedCount, totalCount }) {

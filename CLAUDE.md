@@ -36,7 +36,7 @@ Repo-specific wiring (technique is in the `workbox-pwa` skill):
 - SW sources: `_config/sw/<app>.js` (one per PWA — `hiragana`, `meditation`). Outside the app dirs so Eleventy's passthrough copy doesn't ship them to `_site/`.
 - Build script: `_config/build-sw.js`, runs as an `eleventy.after` hook. Uses `esbuild` to bundle each SW source, substituting `self.__WB_MANIFEST` from `workbox-build`'s `getManifest()`. Output lands at `_site/<app>/sw.js`.
 - Budgets enforced by `_config/build-sw.js`: **10 MB per-PWA precache, 500 KB per-file.** Build fails if exceeded.
-- Hiragana localStorage budget: **500 KB**, enforced by `MAX_STORAGE_BYTES` in `hiragana/app.js` + the worst-case CI test (`hiragana/storage-budget.test.js`). Key name: `hiragana-srs` (stable, unversioned).
+- Hiragana persists a lean per-card shape (`{box, lastDay}` keyed by id; static fields rehydrated from code in `storage.js`) to keep localStorage small. Key name: `hiragana-srs` (stable, unversioned); stats under `hiragana-stats`.
 
 ## Vendored Dependencies
 
@@ -63,7 +63,8 @@ The hiragana app vendors React, ReactDOM, and htm locally in `hiragana/vendor/` 
 These checks run before every deploy:
 
 1. **Lint** (`eslint`) — across all source code.
-2. **Storage budget** (`hiragana/storage-budget.test.js`) — constructs worst-case localStorage state, asserts under 500KB. Auto-extracts character count, card fields, and budget from `app.js`.
+2. **Unit tests** — `hiragana/srs.test.js` (Leitner box logic), `hiragana/numbers.test.js` (1–99 composition + alt generation), `hiragana/storage.test.js` (load/hydrate invariants).
 3. **Vendor sync** (`hiragana/vendor/check-updates.js`) — verifies vendored files match the versions in `package.json`.
 4. **Import scan** (`hiragana/vendor/import-scan.test.js`) — fails if any shipped JS module has an absolute-path import (a class of regression that resolves against the page origin and 404s in production).
 5. **Build** (`npm run build`) — runs Eleventy + the Workbox SW generator. The SW build enforces the per-PWA precache budget (10 MB), per-file limit (500 KB), and auto-detects new shipped assets via `getManifest()`.
+6. **Offline coverage** (`_config/sw/offline.test.js`) — asserts every runtime-fetched hiragana URL (audio, mnemonics, shell) is in the precache manifest, and that the meditation SW caches cross-origin audio correctly. Runs after the build.

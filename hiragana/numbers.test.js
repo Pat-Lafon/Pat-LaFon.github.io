@@ -78,12 +78,13 @@ test("composeNumber rejects 100", () => assert.throws(() => composeNumber(100)))
 test("composeNumber rejects non-integers", () => assert.throws(() => composeNumber(3.5)));
 
 // --- numberEntry shape ---
-test("numberEntry packages id + prompt + composition", () => {
+test("numberEntry packages id + front + composition", () => {
   const e = numberEntry(21);
   assert.equal(e.id, "num-21");
-  assert.equal(e.prompt, "21");
-  assert.equal(e.kana, "にじゅういち");
-  assert.equal(e.romaji, "nijuuichi");
+  assert.equal(e.front, "21");
+  assert.equal(e.reading, "にじゅういち");
+  assert.equal(e.answer, "nijuuichi");
+  assert.equal(e.audioKey, null);
   assert.ok(Array.isArray(e.alts));
 });
 

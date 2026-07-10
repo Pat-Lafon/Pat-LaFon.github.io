@@ -5,13 +5,9 @@
 export const MAX_BOX = 5;
 export const LEARNED_BOX = 3;
 
-// quality: 0=forgot, 1=slow, 2=recalled, 3=instant.
-export function applyGrade(card, quality, today) {
-  let box = card.box;
-  if (quality === 0) box = 1;
-  else if (quality === 1) box = Math.max(1, box - 1);
-  else if (quality === 2) box = Math.min(MAX_BOX, box + 1);
-  else if (quality === 3) box = Math.min(MAX_BOX, box + 2);
+// The typed answer is the grade: correct climbs one box, wrong resets to 1.
+export function applyGrade(card, correct, today) {
+  const box = correct ? Math.min(MAX_BOX, card.box + 1) : 1;
   return { ...card, box, lastDay: today };
 }
 

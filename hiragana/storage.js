@@ -1,10 +1,8 @@
-// Cards on disk are lean — {box, lastDay} keyed by id; static fields (kana,
-// romaji, etc.) live in code and are re-attached on load via hydrateCard.
+// Cards on disk are lean — {box, lastDay} keyed by id; static fields (front,
+// answer, etc.) live in code and are re-attached on load via hydrateCard.
 //
 // IO errors (quota, disabled storage) are intentionally uncaught — a crash is
 // the right signal when persistence breaks.
-
-import { MAX_BOX } from "./srs.js";
 
 export const STORAGE_KEY = "hiragana-srs";
 export const STATS_KEY = "hiragana-stats";
@@ -26,18 +24,8 @@ export function loadState(storage, lookup) {
   if (!parsed || typeof parsed !== "object") return null;
   const cards = {};
   for (const [id, v] of Object.entries(parsed.cards ?? {})) {
-    if (!v || typeof v !== "object") continue;
-    let lean = null;
-    if (typeof v.box === "number" && "lastDay" in v) {
-      lean = { box: v.box, lastDay: typeof v.lastDay === "string" ? v.lastDay : null };
-    } else if (typeof v.box === "number" && typeof v.lastReviewedAt === "number") {
-      // Pre-daily shape: review-count clock is gone; keep box, null the day.
-      lean = { box: v.box, lastDay: null };
-    } else if (typeof v.reps === "number") {
-      // Pre-Leitner SM-2 shape — map reps to box.
-      lean = { box: Math.min(MAX_BOX, Math.max(1, v.reps + 1)), lastDay: null };
-    }
-    if (!lean) continue;
+    if (!v || typeof v !== "object" || typeof v.box !== "number") continue;
+    const lean = { box: v.box, lastDay: typeof v.lastDay === "string" ? v.lastDay : null };
     const hydrated = hydrateCard(id, lean, lookup);
     if (hydrated) cards[id] = hydrated;
   }

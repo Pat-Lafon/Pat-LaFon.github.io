@@ -52,6 +52,7 @@ export function composeNumber(n) {
 
 export function numberEntry(n) {
   const { kana, romaji, alts } = composeNumber(n);
-  const prompt = String(n);
-  return { id: `num-${prompt}`, kana, romaji, prompt, alts };
+  // reading carries the kana so it can be spoken (TTS) and shown on reveal; the
+  // digit string is the prompt the learner reads from.
+  return { id: `num-${n}`, front: String(n), answer: romaji, alts, reading: kana, audioKey: null };
 }
