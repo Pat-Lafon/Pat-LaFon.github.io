@@ -82,3 +82,16 @@ These checks run before every deploy:
 4. **Import scan** (`hiragana/vendor/import-scan.test.js`) — fails if any shipped JS module has an absolute-path import (a class of regression that resolves against the page origin and 404s in production).
 5. **Build** (`npm run build`) — runs Eleventy + the Workbox SW generator. The SW build enforces the per-PWA precache budget (10 MB), per-file limit (500 KB), and auto-detects new shipped assets via `getManifest()`.
 6. **Offline coverage** (`_config/sw/offline.test.js`) — asserts every precached hiragana URL (audio, data files, shell) is in the manifest, that mnemonics are *out* of the precache but covered by a SW runtime route, and that the meditation SW caches cross-origin audio correctly. Runs after the build.
+
+## Verifying UI changes (drive the app)
+
+No automated layout/e2e test guards the PWAs — by decision, rendering changes are verified by driving the built app in a real browser, not asserted in CI. Do this for any change to `views.js`, markup, or CSS. It matters most for the prompt-glyph sizing in `views.js`: the glyph scales to fit by *measuring* its rendered width in a `useLayoutEffect`, so a multi-glyph front (words, compound numbers) that overflows off-screen produces a green `npm test` — only driving it catches that class.
+
+Recipe, no new deps: `npm run build`, serve `_site/` (`python3 -m http.server`), launch the system Chrome headless (`--headless=new --remote-debugging-port=<port>`), and drive it over CDP from a Node script (Node's built-in `WebSocket`/`fetch` suffice). Gotchas that cost time:
+
+- `Runtime.evaluate`'s value nests at `msg.result.result.value` — one level deeper than `Target`/`Page` results.
+- After `Page.navigate`, wait ~1s (or poll for the glyph) before measuring; the ES modules load async and the first navigate after attach is the slowest.
+- The prompt glyph and the header title both carry `lang="ja"` — select the glyph as `.select-none[lang="ja"]`, or you measure the `かな` header instead.
+
+To surface a **word** card without grinding the SRS by hand, seed storage before load, then reload:
+`localStorage['hiragana-srs'] = JSON.stringify({ enabledRows: ['k','n'], cards: { /* every k/n kana id */ [id]: { box: 3, lastDay: <todayKey> } } })`. With the required kana at `box ≥ LEARNED_BOX` (3) and `lastDay` = today, every kana is filtered as done and the always-on word card (added fresh at box 1) is the only thing pending, so it shows immediately. Build the kana-id list from `SECTIONS` via a dynamic `import('./model.js')` inside the page.

@@ -1,22 +1,42 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { html } from "./html.js";
 import { LEARNED_BOX } from "./srs.js";
 import { composeNumber } from "./numbers.js";
 import { SECTIONS } from "./model.js";
 
 // Reveal-phase buttons use this on mousedown: a tap otherwise blurs the practice
-// input, which on iOS dismisses the keyboard and lurches the card.
+// input, which on iOS dismisses the keyboard, shrinking visualViewport and
+// lurching the card.
 const preventBlur = (e) => e.preventDefault();
 
 export function PracticeView({ current, input, setInput, revealed, feedback, handleSubmit, nextCard, speak, inputRef, remaining, learnedCount, totalCount, accuracy, stats, viewportHeight }) {
   const [mnemonicFailed, setMnemonicFailed] = useState(false);
 
-  // Keep the input focused across reveals: if it blurs, iOS dismisses the keyboard,
-  // shrinking visualViewport and lurching the card.
   useEffect(() => {
     setMnemonicFailed(false);
+  }, [current?.id]);
+
+  // Keep the input focused across reveals — a blur triggers the iOS keyboard
+  // dismissal noted on preventBlur above.
+  useEffect(() => {
     inputRef.current?.focus();
   }, [current?.id, revealed, inputRef]);
+
+  // Scale the glyph to fit by measuring its real rendered width (scrollWidth at
+  // nowrap), not by assuming ~1em per glyph — correct for any length or glyph mix
+  // (small kana, kanji, Latin) with no per-glyph budget. useLayoutEffect so the
+  // scale lands before paint, with no overflow flash.
+  const glyphRef = useRef(null);
+  const [glyphScale, setGlyphScale] = useState(1);
+  useLayoutEffect(() => {
+    const el = glyphRef.current;
+    if (!el) return;
+    const box = el.parentElement;
+    const pad = getComputedStyle(box);
+    const avail = box.clientWidth - parseFloat(pad.paddingLeft) - parseFloat(pad.paddingRight);
+    const natural = el.scrollWidth;
+    setGlyphScale(natural > avail ? avail / natural : 1);
+  }, [current?.id, revealed, viewportHeight]);
 
   if (!current) {
     if (totalCount === 0) {
@@ -32,6 +52,7 @@ export function PracticeView({ current, input, setInput, revealed, feedback, han
   const accent = "#9c2a1f";
   const isWrong = revealed && feedback && !feedback.correct;
   const isCorrect = revealed && feedback && feedback.correct;
+  const statusColor = isCorrect ? "#3a5a3a" : accent;
 
   return html`
     <div class="flex-1 flex flex-col min-h-0">
@@ -54,6 +75,7 @@ export function PracticeView({ current, input, setInput, revealed, feedback, han
         }}>
           <div
             key=${current.id}
+            ref=${glyphRef}
             lang="ja"
             onClick=${() => revealed && speak(current)}
             class="text-stone-900 select-none leading-none"
@@ -61,26 +83,29 @@ export function PracticeView({ current, input, setInput, revealed, feedback, han
               fontFamily: "'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', serif",
               fontWeight: 400,
               fontSize: revealed ? "min(36vh, 55vw)" : `min(${Math.round(viewportHeight * 0.3)}px, 52vw)`,
+              whiteSpace: "nowrap",
+              transform: `scale(${glyphScale})`,
+              transformOrigin: revealed ? "center" : "center top",
               animation: "fadeIn 0.4s ease-out",
               cursor: revealed ? "pointer" : "default",
-              transition: "font-size 0.25s ease",
+              transition: "font-size 0.25s ease, transform 0.2s ease",
             }}
           >${current.front}</div>
 
-          ${feedback && html`
+          ${revealed && feedback && html`
             <div class="text-center mt-3" role="status" aria-live="polite" style=${{ animation: "fadeIn 0.25s ease-out" }}>
-              <div class="text-[10px] tracking-[0.3em] uppercase mb-1" style=${{ color: isCorrect ? "#3a5a3a" : accent }}>
+              <div class="text-[10px] tracking-[0.3em] uppercase mb-1" style=${{ color: statusColor }}>
                 ${isCorrect ? "Correct" : "Answer"}
               </div>
               <div class="flex items-center justify-center gap-3">
-                <div class="text-4xl italic" style=${{ color: isCorrect ? "#3a5a3a" : accent, fontWeight: 500 }}>
+                <div class="text-4xl italic" style=${{ color: statusColor, fontWeight: 500 }}>
                   ${feedback.answer}
                 </div>
                 <button
                   onClick=${() => speak(current)}
                   aria-label="Replay sound"
                   class="w-9 h-9 rounded-full border flex items-center justify-center hover:bg-white/60 transition-colors"
-                  style=${{ borderColor: isCorrect ? "#3a5a3a" : accent, color: isCorrect ? "#3a5a3a" : accent }}
+                  style=${{ borderColor: statusColor, color: statusColor }}
                 >
                   <${SpeakerIcon} />
                 </button>
@@ -118,7 +143,7 @@ export function PracticeView({ current, input, setInput, revealed, feedback, han
             onClick=${nextCard}
             onMouseDown=${preventBlur}
             class="w-full py-3 text-sm tracking-[0.3em] uppercase text-white transition-colors"
-            style=${{ backgroundColor: isCorrect ? "#3a5a3a" : accent, fontFamily: "inherit" }}
+            style=${{ backgroundColor: statusColor, fontFamily: "inherit" }}
           >
             Continue ↵
           </button>`}
@@ -259,13 +284,10 @@ export function SettingsView({ enabledRows, toggleRow, cards, onReset, learnedCo
   `;
 }
 
+const NUMBER_ROWS = Array.from({ length: 99 }, (_, i) => ({ n: i + 1, ...composeNumber(i + 1) }));
+
 function NumberReference() {
   const [open, setOpen] = useState(false);
-  const rows = useMemo(() => {
-    const out = [];
-    for (let i = 1; i <= 99; i++) out.push({ n: i, ...composeNumber(i) });
-    return out;
-  }, []);
   return html`
     <div class="mt-8 pt-6 border-t border-stone-300">
       <button
@@ -281,7 +303,7 @@ function NumberReference() {
           Read the pattern, then close. <strong class="not-italic text-stone-700">tens</strong> + <strong lang="ja" class="not-italic text-stone-700">じゅう</strong> + <strong class="not-italic text-stone-700">ones</strong>.
         </div>
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1 mt-2 text-sm">
-          ${rows.map(r => html`
+          ${NUMBER_ROWS.map(r => html`
             <div key=${r.n} class="flex items-baseline gap-2 py-0.5 border-b border-stone-200/60">
               <span class="text-stone-500 tabular-nums w-6 text-right">${r.n}</span>
               <span lang="ja" class="text-stone-900" style=${{ fontFamily: "'Hiragino Mincho ProN', serif" }}>${r.kana}</span>
