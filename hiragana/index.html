@@ -10,6 +10,15 @@
   <meta name="apple-mobile-web-app-title" content="ひらがな" />
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icon-192.png" />
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "./vendor/react.js",
+      "react-dom/client": "./vendor/react-dom.js",
+      "scheduler": "./vendor/scheduler.js"
+    }
+  }
+  </script>
   <link rel="modulepreload" href="./app.js" />
   <link rel="modulepreload" href="./vendor/react.js" />
   <link rel="modulepreload" href="./vendor/react-dom.js" />
@@ -28,16 +37,6 @@
 </head>
 <body>
   <div id="root"><div class="boot" lang="ja">ひ</div></div>
-
-  <script type="importmap">
-  {
-    "imports": {
-      "react": "./vendor/react.js",
-      "react-dom/client": "./vendor/react-dom.js",
-      "scheduler": "./vendor/scheduler.js"
-    }
-  }
-  </script>
 
   <script type="module">
     import React, { useState, useEffect, useRef } from "react";
