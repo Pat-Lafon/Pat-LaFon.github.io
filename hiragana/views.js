@@ -69,7 +69,7 @@ export function PracticeView({ current, input, setInput, revealed, feedback, han
         <div class="absolute bottom-0 left-0 w-5 h-5 border-b border-l border-stone-400"></div>
         <div class="absolute bottom-0 right-0 w-5 h-5 border-b border-r border-stone-400"></div>
 
-        <div class=${`flex-1 min-h-0 flex flex-col items-center px-4 relative ${revealed ? "justify-center" : "justify-start pt-[3vh]"}`} style=${{
+        <div class=${`flex-1 min-h-0 flex flex-col items-center px-4 relative ${revealed ? "justify-center pb-[6vh]" : "justify-start pt-[3vh]"}`} style=${{
           background: isWrong ? "rgba(156, 42, 31, 0.06)" : "rgba(255,253,247,0.5)",
           transition: "background 0.3s",
         }}>
