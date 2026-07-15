@@ -131,8 +131,13 @@ export function wordEntry(word, cardIds, lookup) {
   };
 }
 
-// A word is available for practice once every kana it's built from is learned.
-// A missing card (its row never enabled) reads as box 0 → locked.
-export function isWordUnlocked(card, cardMap) {
-  return card.requiredChars.every((id) => (cardMap[id]?.box ?? 0) >= LEARNED_BOX);
+// A word is available for practice once every kana it's built from is both learned
+// AND still in an enabled row — disabling a row hides its words too, not just its
+// kana. A missing card (its row never enabled) reads as box 0 → locked.
+export function isWordUnlocked(card, cardMap, enabledRows) {
+  const enabled = new Set(enabledRows);
+  return card.requiredChars.every((id) => {
+    const c = cardMap[id];
+    return c && enabled.has(c.rowId) && c.box >= LEARNED_BOX;
+  });
 }

@@ -134,11 +134,14 @@ test("wordEntry: kana front, derived romaji answer, TTS + no mnemonic", () => {
 });
 
 // --- isWordUnlocked ---
-test("isWordUnlocked gates on every requiredChar reaching LEARNED_BOX", () => {
-  const e = wordEntry({ kana: "ねこ", gloss: "cat" }, KANA_IDS, KANA_LOOKUP);
-  assert.equal(isWordUnlocked(e, { "ね": { box: LEARNED_BOX }, "こ": { box: LEARNED_BOX } }), true);
-  assert.equal(isWordUnlocked(e, { "ね": { box: LEARNED_BOX }, "こ": { box: LEARNED_BOX - 1 } }), false);
-  assert.equal(isWordUnlocked(e, {}), false, "missing kana card → locked");
+test("isWordUnlocked gates on requiredChars: learned AND their row enabled", () => {
+  const e = wordEntry({ kana: "ねこ", gloss: "cat" }, KANA_IDS, KANA_LOOKUP); // ね→n, こ→k
+  const rows = ["n", "k"];
+  const learned = { "ね": { box: LEARNED_BOX, rowId: "n" }, "こ": { box: LEARNED_BOX, rowId: "k" } };
+  assert.equal(isWordUnlocked(e, learned, rows), true);
+  assert.equal(isWordUnlocked(e, { "ね": { box: LEARNED_BOX, rowId: "n" }, "こ": { box: LEARNED_BOX - 1, rowId: "k" } }, rows), false);
+  assert.equal(isWordUnlocked(e, {}, rows), false, "missing kana card → locked");
+  assert.equal(isWordUnlocked(e, learned, ["n"]), false, "row disabled → locked even though learned");
 });
 
 console.log(`PASS: ${passed} word tests`);

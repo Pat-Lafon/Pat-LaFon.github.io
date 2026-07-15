@@ -82,7 +82,7 @@ export function PracticeView({ current, input, setInput, revealed, feedback, han
             style=${{
               fontFamily: "'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', serif",
               fontWeight: 400,
-              fontSize: revealed ? "min(36vh, 55vw)" : `min(${Math.round(viewportHeight * 0.3)}px, 52vw)`,
+              fontSize: revealed ? "min(36vh, 55vw)" : "min(30vh, 52vw)",
               whiteSpace: "nowrap",
               transform: `scale(${glyphScale})`,
               transformOrigin: revealed ? "center" : "center top",

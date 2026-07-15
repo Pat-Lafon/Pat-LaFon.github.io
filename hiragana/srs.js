@@ -15,6 +15,18 @@ export function isDoneToday(card, today) {
   return card.box >= LEARNED_BOX && card.lastDay === today;
 }
 
+// Knock the given ids back to box 1 so they resurface today (box 1 < LEARNED_BOX is
+// never done). lastDay is left alone — it only matters at the learned tier. Used
+// when a word is missed to bring its weak letters back into rotation. Ids absent
+// from the map are skipped.
+export function resetBoxes(cardMap, ids) {
+  const next = { ...cardMap };
+  for (const id of ids) {
+    if (next[id]) next[id] = { ...next[id], box: 1 };
+  }
+  return next;
+}
+
 function shuffle(arr) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {

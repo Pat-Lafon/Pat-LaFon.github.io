@@ -4,6 +4,7 @@ import {
   LEARNED_BOX,
   applyGrade,
   isDoneToday,
+  resetBoxes,
   pickNext as pickNextPure,
 } from "./srs.js";
 import { isWordUnlocked, WORDS_ROW_ID } from "./words.js";
@@ -88,7 +89,7 @@ export function App() {
 
   // Word cards ride along on top of the user's toggled rows, gated per-card.
   const effectiveRows = useMemo(() => [...enabledRows, ...ALWAYS_ON_ROWS], [enabledRows]);
-  const wordAvailable = (cardMap) => (c) => c.rowId !== WORDS_ROW_ID || isWordUnlocked(c, cardMap);
+  const wordAvailable = (cardMap) => (c) => c.rowId !== WORDS_ROW_ID || isWordUnlocked(c, cardMap, effectiveRows);
   const pickNext = (cardMap = cards, exclude = current?.id) =>
     pickNextPure(cardMap, today, effectiveRows, exclude, wordAvailable(cardMap));
 
@@ -100,7 +101,11 @@ export function App() {
     setFeedback({ correct, answer: current.answer });
     setStats((s) => ({ ...s, reviewed: s.reviewed + 1, correct: s.correct + (correct ? 1 : 0) }));
     speak(current);
-    setCards((prev) => ({ ...prev, [current.id]: applyGrade(current, correct, today) }));
+    setCards((prev) => {
+      const graded = { ...prev, [current.id]: applyGrade(current, correct, today) };
+      // Missing a word knocks its constituent kana back so the weak letters resurface.
+      return !correct && current.requiredChars ? resetBoxes(graded, current.requiredChars) : graded;
+    });
   }
 
   function nextCard() {

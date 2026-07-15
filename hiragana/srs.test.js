@@ -6,6 +6,7 @@ import {
   LEARNED_BOX,
   applyGrade,
   isDoneToday,
+  resetBoxes,
   pickNext,
 } from "./srs.js";
 
@@ -49,6 +50,26 @@ test("isDoneToday: learned on an earlier day owes a review today", () => {
 });
 test("isDoneToday: below the learned tier is never done, even answered today", () => {
   assert.equal(isDoneToday(card({ id: "あ", box: LEARNED_BOX - 1, lastDay: TODAY }), TODAY), false);
+});
+
+// --- resetBoxes ---
+test("resetBoxes knocks the named ids to box 1 and leaves others untouched", () => {
+  const cards = {
+    "ね": card({ id: "ね", rowId: "n", box: 5, lastDay: TODAY }),
+    "こ": card({ id: "こ", rowId: "k", box: 4, lastDay: YESTERDAY }),
+    "か": card({ id: "か", rowId: "k", box: 3, lastDay: TODAY }),
+  };
+  const next = resetBoxes(cards, ["ね", "こ"]);
+  assert.equal(next["ね"].box, 1);
+  assert.equal(next["こ"].box, 1);
+  assert.equal(next["こ"].lastDay, YESTERDAY, "lastDay is left alone");
+  assert.equal(next["か"].box, 3, "untargeted card is unchanged");
+  assert.equal(cards["ね"].box, 5, "input map is not mutated");
+});
+test("resetBoxes skips ids absent from the map", () => {
+  const cards = { "ね": card({ id: "ね", box: 4 }) };
+  assert.deepEqual(resetBoxes(cards, ["こ"])["ね"].box, 4);
+  assert.equal("こ" in resetBoxes(cards, ["こ"]), false);
 });
 
 // --- pickNext ---
