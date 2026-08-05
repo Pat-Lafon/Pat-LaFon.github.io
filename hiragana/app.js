@@ -7,7 +7,7 @@ import {
   resetBoxes,
   pickNext as pickNextPure,
 } from "./srs.js";
-import { isWordUnlocked, WORDS_ROW_ID } from "./words.js";
+import { coveredKanaIds, isWordUnlocked, WORDS_ROW_ID } from "./words.js";
 import {
   saveState as saveStateToStorage,
   loadStats as loadStatsFromStorage,
@@ -90,8 +90,16 @@ export function App() {
   // Word cards ride along on top of the user's toggled rows, gated per-card.
   const effectiveRows = useMemo(() => [...enabledRows, ...ALWAYS_ON_ROWS], [enabledRows]);
   const wordAvailable = (cardMap) => (c) => c.rowId !== WORDS_ROW_ID || isWordUnlocked(c, cardMap, effectiveRows);
+  // A kana covered by an unlocked word is retired from the rotation — the word
+  // reviews it in context. It still counts as learned/enabled below; it's only
+  // never pending.
+  const rotationAvailable = (cardMap) => {
+    const unlocked = wordAvailable(cardMap);
+    const retired = coveredKanaIds(cardMap, effectiveRows);
+    return (c) => unlocked(c) && !retired.has(c.id);
+  };
   const pickNext = (cardMap = cards, exclude = current?.id) =>
-    pickNextPure(cardMap, today, effectiveRows, exclude, wordAvailable(cardMap));
+    pickNextPure(cardMap, today, effectiveRows, exclude, rotationAvailable(cardMap));
 
   function handleSubmit(e) {
     e?.preventDefault();
@@ -116,7 +124,7 @@ export function App() {
 
   useEffect(() => {
     if (current) return;
-    const next = pickNextPure(cards, today, effectiveRows, undefined, wordAvailable(cards));
+    const next = pickNextPure(cards, today, effectiveRows, undefined, rotationAvailable(cards));
     if (next) setCurrent(next);
   }, [current, cards, today, effectiveRows]);
 
@@ -154,10 +162,12 @@ export function App() {
       effectiveRows.includes(c.rowId) && wordAvailable(cards)(c)),
     [cards, effectiveRows],
   );
-  const remaining = useMemo(
-    () => enabledCards.filter(c => !isDoneToday(c, today)).length,
-    [enabledCards, today],
-  );
+  // Retired kana are excluded here too, so "to go" only counts cards pickNext
+  // can actually serve.
+  const remaining = useMemo(() => {
+    const retired = coveredKanaIds(cards, effectiveRows);
+    return enabledCards.filter(c => !isDoneToday(c, today) && !retired.has(c.id)).length;
+  }, [enabledCards, cards, effectiveRows, today]);
   const learnedCount = useMemo(
     () => enabledCards.filter(c => c.box >= LEARNED_BOX).length,
     [enabledCards],

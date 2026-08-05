@@ -5,3 +5,6 @@ pl\.cs\.uchicago\.edu
 
 # Host down.
 guidetojapanese\.org
+
+# HTTP-only and rejects non-browser clients; /deadlines/ links many events there.
+wikicfp\.com

@@ -1,0 +1,94 @@
+---
+title: Deadlines
+description: Upcoming submission deadlines for programming languages and formal methods venues.
+eleventyNavigation:
+  key: Deadlines
+  order: 5
+---
+{% css %}
+.deadlines table {
+	width: 100%;
+	border-collapse: collapse;
+	margin-block-end: 2em;
+}
+.deadlines th,
+.deadlines td {
+	text-align: left;
+	vertical-align: top;
+	padding: 0.35em 0.75em 0.35em 0;
+	border-bottom: 1px solid rgba(128, 128, 128, 0.35);
+}
+.deadlines .countdown {
+	white-space: nowrap;
+	font-variant-numeric: tabular-nums;
+	opacity: 0.75;
+}
+.deadlines small {
+	opacity: 0.75;
+}
+{% endcss %}
+
+<div class="deadlines">
+
+<h1>Deadlines</h1>
+
+{% if deadlines.errors.length %}
+<p><strong>Some sources failed at build time, so this list is incomplete:</strong></p>
+<ul>
+{% for error in deadlines.errors %}
+	<li>{{ error.source }} — <code>{{ error.message }}</code></li>
+{% endfor %}
+</ul>
+{% endif %}
+
+<h2>Conferences</h2>
+
+<table>
+	<thead>
+		<tr><th>Conference</th><th>Deadline</th><th>What</th><th>Event</th></tr>
+	</thead>
+	<tbody>
+	{%- for row in deadlines.conferences %}
+		<tr>
+			<td><a href="{{ row.url }}">{{ row.conf }}</a></td>
+			<td>{{ row.deadline | readableDate("dd LLL yyyy", "UTC-12") }} <span class="countdown" data-deadline="{{ row.deadlineISO }}"></span></td>
+			<td>{{ row.comment }}</td>
+			<td>{{ row.when }}{% if row.place %}<br><small>{{ row.place }}</small>{% endif %}</td>
+		</tr>
+	{%- endfor %}
+	</tbody>
+</table>
+
+<h2>Open CFPs on WikiCFP</h2>
+
+<table>
+	<thead>
+		<tr><th>Event</th><th>Deadline</th><th>When</th><th>Where</th></tr>
+	</thead>
+	<tbody>
+	{%- for event in deadlines.wikicfp %}
+		<tr>
+			<td><a href="{{ event.url }}">{{ event.name }}</a><br><small>{{ event.fullName }}</small></td>
+			<td>{{ event.deadline | readableDate("dd LLL yyyy", "UTC-12") }} <span class="countdown" data-deadline="{{ event.deadlineISO }}"></span>{% if event.abstractDeadline %}<br><small>abstract {{ event.abstractDeadline }}</small>{% endif %}</td>
+			<td>{{ event.when }}</td>
+			<td>{{ event.where }}<br><small>{{ event.categories | join(", ") }}</small></td>
+		</tr>
+	{%- endfor %}
+	</tbody>
+</table>
+
+<p><small>
+Deadlines are end of day, Anywhere on Earth. List built {{ deadlines.generated | readableDate("dd LLL yyyy", "UTC-12") }} and refreshed weekly from
+<a href="https://github.com/ccfddl/ccf-deadlines">ccf-deadlines</a>,
+<a href="https://yeah-tiger.github.io/">PL conference deadlines</a>, and
+<a href="http://www.wikicfp.com/">WikiCFP</a>; countdowns are live.
+</small></p>
+
+</div>
+
+{% js %}
+for (const el of document.querySelectorAll(".deadlines [data-deadline]")) {
+	const days = Math.ceil((Date.parse(el.dataset.deadline) - Date.now()) / 86400000);
+	el.textContent = days < 0 ? "(passed)" : days === 0 ? "(today)" : `(in ${days} day${days === 1 ? "" : "s"})`;
+}
+{% endjs %}

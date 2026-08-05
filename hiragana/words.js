@@ -141,3 +141,17 @@ export function isWordUnlocked(card, cardMap, enabledRows) {
     return c && enabled.has(c.rowId) && c.box >= LEARNED_BOX;
   });
 }
+
+// Kana ids covered by at least one unlocked word. A covered kana retires from the
+// daily rotation — the words review it in context. Unlocking already requires
+// every constituent kana to be learned, so membership here implies learned; no
+// separate box check. Missing a word knocks its kana back to box 1 (resetBoxes),
+// which re-locks the word and puts the bare glyphs back in rotation.
+export function coveredKanaIds(cardMap, enabledRows) {
+  const covered = new Set();
+  for (const card of Object.values(cardMap)) {
+    if (card.rowId !== WORDS_ROW_ID || !isWordUnlocked(card, cardMap, enabledRows)) continue;
+    for (const id of card.requiredChars) covered.add(id);
+  }
+  return covered;
+}

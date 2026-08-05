@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+  schedule:
+    # Weekly, Monday 07:00 UTC. Refreshes the build-time data behind /deadlines/.
+    - cron: '0 7 * * 1'
   workflow_dispatch:
 
 permissions:

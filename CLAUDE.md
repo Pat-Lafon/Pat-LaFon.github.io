@@ -15,7 +15,16 @@ Node version: 24 (see `.nvmrc`).
 ## Build & Deployment specifics
 
 - `npm run build-ghpages` — production build with the project-pages pathprefix applied.
-- Push to `main` triggers `.github/workflows/gh-pages.yml` which runs `build-ghpages` and deploys `_site/` via `peaceiris/actions-gh-pages`.
+- Push to `main` triggers `.github/workflows/gh-pages.yml` which runs `build-ghpages` and deploys `_site/` via the first-party `actions/upload-pages-artifact` + `actions/deploy-pages` pair. A weekly Monday cron on the same workflow redeploys so the deadlines page's build-time data stays fresh.
+
+## Deadlines page
+
+`/deadlines/` (`content/deadlines.njk`) lists upcoming PL/FM submission deadlines from data fetched at build time by `_data/deadlines.js` (cached 1 day in `.cache/` via `@11ty/eleventy-fetch`; the deploy workflow caches that dir). Three sources, each optional — a per-source fetch/parse failure renders as a visible note on the page instead of failing the build:
+
+- Curated YAML: [ccfddl/ccf-deadlines](https://github.com/ccfddl/ccf-deadlines) per-conference files (the `CCFDDL` const lists which) and yeah-tiger.github.io's `conferences.yml`, which fills conference editions ccfddl hasn't entered yet. Merged by conference+year, ccfddl first.
+- Scraped WikiCFP category pages (`WIKICFP_CATEGORIES`). Journal/book-chapter CFPs (no event dates — mostly predatory) and typo-year deadlines are filtered out; entries the curated list covers are deduped away. `wikicfp.com` is in `.lycheeignore` (HTTP-only, rejects non-browser clients).
+
+Deadline dates are rendered at build; "days left" counts are computed client-side so they stay live between weekly rebuilds. A sparse page in the summer trough is normal — sources fill in as fall CFPs post.
 
 ## Hiragana PWA
 
@@ -63,7 +72,7 @@ The hiragana app vendors React, ReactDOM, and htm locally in `hiragana/vendor/` 
 These checks run before every deploy:
 
 1. **Lint** (`eslint`) — across all source code.
-2. **Unit tests** — `hiragana/srs.test.js` (Leitner box logic), `hiragana/numbers.test.js` (1–99 composition + alt generation), `hiragana/storage.test.js` (load/hydrate invariants), `hiragana/words.test.js` (word scan/composition + unlock gate; imports `deck.json` + `words.json` for the real kana deck, so a word referencing an untaught glyph fails here — sokuon `っ`/`ッ`, long-vowel `ー`, and the ん→m Hepburn alt are supported via derivation), `hiragana/match.test.js` (answer grading — case/whitespace/alt/bypass/empty).
+2. **Unit tests** — `hiragana/srs.test.js` (Leitner box logic), `hiragana/numbers.test.js` (1–99 composition + alt generation), `hiragana/storage.test.js` (load/hydrate invariants), `hiragana/words.test.js` (word scan/composition + unlock gate + kana retirement; imports `deck.json` + `words.json` for the real kana deck, so a word referencing an untaught glyph fails here — sokuon `っ`/`ッ`, long-vowel `ー`, and the ん→m Hepburn alt are supported via derivation; also pins deck coverage, so a new deck kana with no covering word fails until a word is authored or the kana is added to the wordless-residue list), `hiragana/match.test.js` (answer grading — case/whitespace/alt/bypass/empty).
 3. **Vendor sync** (`hiragana/vendor/check-updates.js`) — verifies vendored files match the versions in `package.json`.
 4. **Import scan** (`hiragana/vendor/import-scan.test.js`) — fails if any shipped JS module has an absolute-path import (a class of regression that resolves against the page origin and 404s in production).
 5. **Build** (`npm run build`) — runs Eleventy + the Workbox SW generator. The SW build enforces the per-PWA precache budget (10 MB), per-file limit (500 KB), and auto-detects new shipped assets via `getManifest()`.
@@ -76,4 +85,4 @@ No automated layout/e2e test guards the PWAs — rendering changes are verified 
 The generic headless-Chrome-over-CDP recipe (`npm run build` → serve `_site/` with `python3 -m http.server` → `--headless=new --remote-debugging-port` → drive via Node `WebSocket`/`fetch`) lives in the `headless-cdp-ui-testing` skill. Repo-specific gotcha: the prompt glyph and the header title both carry `lang="ja"` — select the glyph as `.select-none[lang="ja"]`, or you measure the `かな` header instead.
 
 To surface a **word** card without grinding the SRS by hand, seed storage before load, then reload:
-`localStorage['hiragana-srs'] = JSON.stringify({ enabledRows: ['k','n'], cards: { /* every k/n kana id */ [id]: { box: 3, lastDay: <todayKey> } } })`. With the required kana at `box ≥ LEARNED_BOX` (3) and `lastDay` = today, every kana is filtered as done and the always-on word card (added fresh at box 1) is the only thing pending, so it shows immediately. Build the kana-id list from `SECTIONS` via a dynamic `import('./model.js')` inside the page.
+`localStorage['hiragana-srs'] = JSON.stringify({ enabledRows: ['k','n'], cards: { /* every k/n kana id */ [id]: { box: 3, lastDay: <todayKey> } } })`. With the required kana at `box ≥ LEARNED_BOX` (3) and `lastDay` = today, every kana is filtered as done and the always-on word card (added fresh at box 1) is the only thing pending, so it shows immediately. `lastDay` is load-bearing even though covered kana retire from the rotation (`coveredKanaIds` in `words.js`): word cards merge into the map in an effect *after* the first pick, so on a freshly seeded load nothing is retired yet and a bare kana would be served first. Build the kana-id list from `SECTIONS` via a dynamic `import('./model.js')` inside the page.

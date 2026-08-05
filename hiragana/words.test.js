@@ -6,7 +6,7 @@
 // so the deck set is all kana sections combined.
 
 import assert from "node:assert/strict";
-import { scanKana, composeWord, wordEntry, isWordUnlocked } from "./words.js";
+import { scanKana, composeWord, wordEntry, isWordUnlocked, coveredKanaIds } from "./words.js";
 import { LEARNED_BOX } from "./srs.js";
 import DECK from "./deck.json" with { type: "json" };
 import WORDS from "./words.json" with { type: "json" };
@@ -142,6 +142,52 @@ test("isWordUnlocked gates on requiredChars: learned AND their row enabled", () 
   assert.equal(isWordUnlocked(e, { "ね": { box: LEARNED_BOX, rowId: "n" }, "こ": { box: LEARNED_BOX - 1, rowId: "k" } }, rows), false);
   assert.equal(isWordUnlocked(e, {}, rows), false, "missing kana card → locked");
   assert.equal(isWordUnlocked(e, learned, ["n"]), false, "row disabled → locked even though learned");
+});
+
+// --- coveredKanaIds (kana retirement) ---
+test("coveredKanaIds is the union of unlocked words' requiredChars", () => {
+  const neko = { ...wordEntry({ kana: "ねこ", gloss: "cat" }, KANA_IDS, KANA_LOOKUP), box: 1 };
+  const inu = { ...wordEntry({ kana: "いぬ", gloss: "dog" }, KANA_IDS, KANA_LOOKUP), box: 1 };
+  const cardMap = {
+    "ね": { id: "ね", box: LEARNED_BOX, rowId: "n" },
+    "こ": { id: "こ", box: LEARNED_BOX, rowId: "k" },
+    "い": { id: "い", box: LEARNED_BOX, rowId: "vowels" },
+    "ぬ": { id: "ぬ", box: LEARNED_BOX - 1, rowId: "n" }, // いぬ stays locked
+    [neko.id]: neko,
+    [inu.id]: inu,
+  };
+  const covered = coveredKanaIds(cardMap, ["n", "k", "vowels", "words"]);
+  assert.deepEqual([...covered].sort(), ["こ", "ね"]);
+});
+test("coveredKanaIds un-covers when a constituent kana drops below learned", () => {
+  const neko = { ...wordEntry({ kana: "ねこ", gloss: "cat" }, KANA_IDS, KANA_LOOKUP), box: 4 };
+  const cardMap = {
+    "ね": { id: "ね", box: 1, rowId: "n" }, // knocked back by a missed word
+    "こ": { id: "こ", box: LEARNED_BOX, rowId: "k" },
+    [neko.id]: neko,
+  };
+  assert.equal(coveredKanaIds(cardMap, ["n", "k", "words"]).size, 0);
+});
+
+// Retirement rests on word coverage, so pin the residue: a kana earns a word only
+// if a genuinely useful one (everyday vocab, N5-level) contains it. These combos
+// have none — their only candidates are proper nouns (ミャンマー, ピョンヤン,
+// モーツァルト), dated spellings (ラヂオ), or obscura (ビャクダン) — so they carry
+// no word and keep drilling daily as bare kana instead. A new deck kana without a
+// covering word fails here — author a useful word or add it to this list
+// deliberately.
+test("every deck kana except the known wordless residue appears in ≥1 word", () => {
+  const covered = new Set();
+  for (const w of WORDS) {
+    for (const s of scanKana(w.kana, KANA_IDS)) if (s.kind === "kana") covered.add(s.id);
+  }
+  const uncovered = [...KANA_IDS].filter(k => !covered.has(k)).sort();
+  const residue = [
+    "みゅ",
+    "ヂ", "ヅ", "ヒャ", "ミャ", "ビャ", "ビョ", "ピャ", "ピョ", "リョ",
+    "ヴェ", "ドゥ", "ツァ", "ツィ", "ツェ", "ツォ", "イェ",
+  ];
+  assert.deepEqual(uncovered, residue.sort());
 });
 
 console.log(`PASS: ${passed} word tests`);
