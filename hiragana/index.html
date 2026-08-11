@@ -31,8 +31,13 @@
     html, body, #root { height: 100%; margin: 0; padding: 0; overscroll-behavior: none; }
     html { background: radial-gradient(ellipse at top, #f5efe2 0%, #ebe2cf 60%, #ddd0b3 100%); }
     body { -webkit-tap-highlight-color: transparent; font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', serif; }
-    .boot { display: flex; align-items: center; justify-content: center; height: 100%; color: #1c1917; font-size: min(48vh, 70vw); line-height: 1; }
+    /* Sized to the prompt glyph and dimmed, so the placeholder reads as a loading
+       mark rather than a card that jumps when React swaps in the real one. */
+    .boot { display: flex; align-items: center; justify-content: center; height: 100%; color: #1c1917; font-size: min(30vh, 52vw); line-height: 1; opacity: 0.2; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+    /* For elements that carry their own transform: a keyframe's transform outranks
+       the inline one, so the prompt glyph's fade must leave transform alone. */
+    @keyframes fadeInOpacity { from { opacity: 0; } to { opacity: 1; } }
 </style>
 </head>
 <body>

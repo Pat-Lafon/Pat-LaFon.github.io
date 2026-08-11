@@ -115,6 +115,7 @@ let pauseStartedAt = 0;
 let audioCtx = null;
 let noiseSource = null;
 let filterNodes = [];
+let highpassNodes = [];
 let gainNode = null;
 let wakeLock = null;
 
@@ -178,6 +179,10 @@ function ensureAudio() {
     const Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return;
     audioCtx = new Ctx();
+    // iOS routes a bare AudioContext to the 'ambient' session category, which
+    // the hardware ringer switch silences; 'playback' is the media category
+    // that ignores it. Safari-only (16.4+), hence the feature check.
+    if ('audioSession' in navigator) navigator.audioSession.type = 'playback';
   }
   // Resume unconditionally, not gated on state==='suspended': after
   // pause→resume the suspend() may not have settled, so a gated resume would

@@ -26,6 +26,10 @@ export function PracticeView({ current, input, setInput, revealed, feedback, han
   // nowrap), not by assuming ~1em per glyph — correct for any length or glyph mix
   // (small kana, kanji, Latin) with no per-glyph budget. useLayoutEffect so the
   // scale lands before paint, with no overflow flash.
+  //
+  // The glyph's font-size is fixed across reveal so scrollWidth is stable here.
+  // A font-size that transitioned on reveal would still be mid-animation at this
+  // read, locking in a scale for a size the glyph then grows past.
   const glyphRef = useRef(null);
   const [glyphScale, setGlyphScale] = useState(1);
   useLayoutEffect(() => {
@@ -69,9 +73,15 @@ export function PracticeView({ current, input, setInput, revealed, feedback, han
         <div class="absolute bottom-0 left-0 w-5 h-5 border-b border-l border-stone-400"></div>
         <div class="absolute bottom-0 right-0 w-5 h-5 border-b border-r border-stone-400"></div>
 
-        <div class=${`flex-1 min-h-0 flex flex-col items-center px-4 relative ${revealed ? "justify-center pb-[6vh]" : "justify-start pt-[3vh]"}`} style=${{
+        <div class="flex-1 min-h-0 flex flex-col items-center px-4 relative justify-start pt-[3vh] overflow-y-auto overflow-x-hidden" style=${{
           background: isWrong ? "rgba(156, 42, 31, 0.06)" : "rgba(255,253,247,0.5)",
           transition: "background 0.3s",
+          // `overflow-x-hidden` above: scale-to-fit shrinks the glyph visually but
+          // leaves its layout width at full size, which would raise a horizontal
+          // scrollbar on every multi-glyph front.
+          // The gutter is reserved on both edges so a vertical scrollbar appearing
+          // with the reveal block can't narrow clientWidth and re-scale the glyph.
+          scrollbarGutter: "stable both-edges",
         }}>
           <div
             key=${current.id}
@@ -82,13 +92,12 @@ export function PracticeView({ current, input, setInput, revealed, feedback, han
             style=${{
               fontFamily: "'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', serif",
               fontWeight: 400,
-              fontSize: revealed ? "min(36vh, 55vw)" : "min(30vh, 52vw)",
+              fontSize: "min(30vh, 52vw)",
               whiteSpace: "nowrap",
               transform: `scale(${glyphScale})`,
-              transformOrigin: revealed ? "center" : "center top",
-              animation: "fadeIn 0.4s ease-out",
+              transformOrigin: "center top",
+              animation: "fadeInOpacity 0.4s ease-out",
               cursor: revealed ? "pointer" : "default",
-              transition: "font-size 0.25s ease, transform 0.2s ease",
             }}
           >${current.front}</div>
 
@@ -123,13 +132,17 @@ export function PracticeView({ current, input, setInput, revealed, feedback, han
                   you typed "${input}"
                 </div>
                 ${current.hasMnemonic && !mnemonicFailed && html`
+                  <!-- Every mnemonic is a 400x400 png; the intrinsic size holds the
+                       200x200 box open so the reveal block doesn't jump when the
+                       bytes land. Eager because it only mounts once already needed. -->
                   <img
                     src=${`./mnemonics/${current.answer}.png`}
                     alt=${`Mnemonic for ${current.front}`}
-                    loading="lazy"
+                    width="200"
+                    height="200"
                     onError=${() => setMnemonicFailed(true)}
                     class="mt-3 rounded-lg shadow-sm"
-                    style=${{ maxWidth: "200px", maxHeight: "200px", margin: "12px auto 0" }}
+                    style=${{ margin: "12px auto 0" }}
                   />
                 `}
               `}
@@ -166,7 +179,7 @@ export function PracticeView({ current, input, setInput, revealed, feedback, han
             spellCheck=${false}
             enterKeyHint="go"
             class="w-full text-center text-xl py-3 bg-transparent border-b-2 border-stone-400 focus:border-stone-900 outline-none italic text-stone-900 placeholder:text-stone-400 placeholder:italic transition-colors"
-            style=${{ fontFamily: "'EB Garamond', serif" }}
+            style=${{ fontFamily: "inherit" }}
           />
         </form>
       </div>
