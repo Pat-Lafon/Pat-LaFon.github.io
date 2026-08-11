@@ -84,8 +84,14 @@ function clearEndChimeTimers() {
 const SIDE = 280;
 const PHASE_MS = 4000;
 
-const FILTER_LOW = 180;
-const FILTER_HIGH = 700;
+// The noise buffer is brown — energy rises 6 dB/oct toward DC — so the lowpass
+// sweep alone leaves most of the whoosh below 300 Hz, where phone speakers
+// produce nothing.
+const HIGHPASS = 300;
+// Sweep floor: at or below HIGHPASS the two filters cancel and the whoosh
+// nearly vanishes.
+const FILTER_LOW = HIGHPASS * 1.5;
+const FILTER_HIGH = 1600;
 const MAX_GAIN = 0.55;
 const CHIME_DURATION = 0.6;
 
@@ -179,9 +185,9 @@ function ensureAudio() {
     const Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return;
     audioCtx = new Ctx();
-    // iOS routes a bare AudioContext to the 'ambient' session category, which
-    // the hardware ringer switch silences; 'playback' is the media category
-    // that ignores it. Safari-only (16.4+), hence the feature check.
+    // A bare AudioContext defaults to the 'ambient' session category, which the
+    // iOS ringer switch silences; 'playback' ignores the switch. Implemented
+    // only by Safari, from 16.4.
     if ('audioSession' in navigator) navigator.audioSession.type = 'playback';
   }
   // Resume unconditionally, not gated on state==='suspended': after
@@ -192,6 +198,16 @@ function ensureAudio() {
   if (!noiseSource) {
     gainNode = audioCtx.createGain();
     gainNode.gain.value = 0.0001;
+    // Two stages: one -12 dB/oct highpass against the noise's +6 dB/oct rise
+    // nets -6 dB/oct below the corner, too gentle to clear the four octaves
+    // under HIGHPASS.
+    highpassNodes = [0, 1].map(() => {
+      const f = audioCtx.createBiquadFilter();
+      f.type = 'highpass';
+      f.frequency.value = HIGHPASS;
+      f.Q.value = 0.7;
+      return f;
+    });
     // Two-pole lowpass cascade for a steeper rolloff.
     filterNodes = [0, 1].map(() => {
       const f = audioCtx.createBiquadFilter();
@@ -203,7 +219,7 @@ function ensureAudio() {
     noiseSource = audioCtx.createBufferSource();
     noiseSource.buffer = createNoiseBuffer(audioCtx);
     noiseSource.loop = true;
-    const tail = filterNodes.reduce((node, f) => node.connect(f), noiseSource);
+    const tail = [...highpassNodes, ...filterNodes].reduce((node, f) => node.connect(f), noiseSource);
     tail.connect(gainNode).connect(audioCtx.destination);
     noiseSource.start();
   }
@@ -336,6 +352,7 @@ function stopBreathAudio() {
   // stop() throws InvalidStateError if the source was already stopped; rethrow anything else.
   try { noiseSource.stop(); } catch (e) { if (e.name !== "InvalidStateError") throw e; }
   noiseSource.disconnect(); noiseSource = null;
+  highpassNodes.forEach(f => f.disconnect()); highpassNodes = [];
   filterNodes.forEach(f => f.disconnect()); filterNodes = [];
   gainNode.disconnect(); gainNode = null;
 }
