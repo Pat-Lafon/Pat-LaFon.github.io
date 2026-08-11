@@ -177,6 +177,9 @@ export function App() {
     [stats],
   );
 
+  // The column's height cap is absolute rather than a vh fraction so it stops
+  // binding when the keyboard shrinks the viewport — a fraction would keep
+  // clamping there, taking space from the card to leave a gap below the input.
   return html`
     <div class="w-full flex flex-col overflow-hidden" style=${{
       height: `${viewportHeight}px`,
@@ -189,7 +192,7 @@ export function App() {
         backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.3 0 0 0 0 0.25 0 0 0 0 0.18 0 0 0 0.4 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E\")",
       }} />
 
-      <div class="relative max-w-2xl w-full mx-auto px-5 pt-4 pb-3 flex-1 flex flex-col min-h-0">
+      <div class="relative max-w-2xl w-full m-auto px-5 pt-4 pb-[calc(0.75rem_+_env(safe-area-inset-bottom))] flex-1 max-h-[720px] flex flex-col min-h-0">
         <header class="flex items-center justify-between mb-3 flex-shrink-0">
           <h1 class="text-base text-stone-900" style=${{ fontWeight: 500, letterSpacing: "-0.01em" }}>
             <span lang="ja">かな</span> <span class="text-stone-400 mx-0.5">·</span> <span class="italic text-stone-600 text-sm">kana</span>
