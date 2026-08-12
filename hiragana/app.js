@@ -4,7 +4,6 @@ import {
   LEARNED_BOX,
   applyGrade,
   isDoneToday,
-  resetBoxes,
   pickNext as pickNextPure,
 } from "./srs.js";
 import { coveredKanaIds, isWordUnlocked, WORDS_ROW_ID } from "./words.js";
@@ -109,11 +108,7 @@ export function App() {
     setFeedback({ correct, answer: current.answer });
     setStats((s) => ({ ...s, reviewed: s.reviewed + 1, correct: s.correct + (correct ? 1 : 0) }));
     speak(current);
-    setCards((prev) => {
-      const graded = { ...prev, [current.id]: applyGrade(current, correct, today) };
-      // Missing a word knocks its constituent kana back so the weak letters resurface.
-      return !correct && current.requiredChars ? resetBoxes(graded, current.requiredChars) : graded;
-    });
+    setCards((prev) => ({ ...prev, [current.id]: applyGrade(current, correct, today) }));
   }
 
   function nextCard() {

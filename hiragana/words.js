@@ -145,8 +145,10 @@ export function isWordUnlocked(card, cardMap, enabledRows) {
 // Kana ids covered by at least one unlocked word. A covered kana retires from the
 // daily rotation — the words review it in context. Unlocking already requires
 // every constituent kana to be learned, so membership here implies learned; no
-// separate box check. Missing a word knocks its kana back to box 1 (resetBoxes),
-// which re-locks the word and puts the bare glyphs back in rotation.
+// separate box check. Retirement is one-way while the rows stay enabled: a missed
+// word grades only the word card, because the miss doesn't say which of its kana
+// failed and demoting all of them would knock back the glyphs typed correctly. The
+// word repeats at box 1 until corrected, so the weak glyph is re-drilled in context.
 export function coveredKanaIds(cardMap, enabledRows) {
   const covered = new Set();
   for (const card of Object.values(cardMap)) {

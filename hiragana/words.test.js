@@ -162,7 +162,7 @@ test("coveredKanaIds is the union of unlocked words' requiredChars", () => {
 test("coveredKanaIds un-covers when a constituent kana drops below learned", () => {
   const neko = { ...wordEntry({ kana: "ねこ", gloss: "cat" }, KANA_IDS, KANA_LOOKUP), box: 4 };
   const cardMap = {
-    "ね": { id: "ね", box: 1, rowId: "n" }, // knocked back by a missed word
+    "ね": { id: "ね", box: 1, rowId: "n" }, // missed as a bare glyph, before ねこ covered it
     "こ": { id: "こ", box: LEARNED_BOX, rowId: "k" },
     [neko.id]: neko,
   };

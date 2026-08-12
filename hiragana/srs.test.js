@@ -6,7 +6,6 @@ import {
   LEARNED_BOX,
   applyGrade,
   isDoneToday,
-  resetBoxes,
   pickNext,
 } from "./srs.js";
 
@@ -52,26 +51,6 @@ test("isDoneToday: below the learned tier is never done, even answered today", (
   assert.equal(isDoneToday(card({ id: "あ", box: LEARNED_BOX - 1, lastDay: TODAY }), TODAY), false);
 });
 
-// --- resetBoxes ---
-test("resetBoxes knocks the named ids to box 1 and leaves others untouched", () => {
-  const cards = {
-    "ね": card({ id: "ね", rowId: "n", box: 5, lastDay: TODAY }),
-    "こ": card({ id: "こ", rowId: "k", box: 4, lastDay: YESTERDAY }),
-    "か": card({ id: "か", rowId: "k", box: 3, lastDay: TODAY }),
-  };
-  const next = resetBoxes(cards, ["ね", "こ"]);
-  assert.equal(next["ね"].box, 1);
-  assert.equal(next["こ"].box, 1);
-  assert.equal(next["こ"].lastDay, YESTERDAY, "lastDay is left alone");
-  assert.equal(next["か"].box, 3, "untargeted card is unchanged");
-  assert.equal(cards["ね"].box, 5, "input map is not mutated");
-});
-test("resetBoxes skips ids absent from the map", () => {
-  const cards = { "ね": card({ id: "ね", box: 4 }) };
-  assert.deepEqual(resetBoxes(cards, ["こ"])["ね"].box, 4);
-  assert.equal("こ" in resetBoxes(cards, ["こ"]), false);
-});
-
 // --- pickNext ---
 test("pickNext returns null when no enabled cards exist", () => {
   assert.equal(pickNext({ "あ": card({ id: "あ" }) }, TODAY, ["k"]), null);
@@ -113,10 +92,28 @@ test("pickNext returns the only pending card when pool == 1, even if excluded", 
   const cards = { "あ": card({ id: "あ" }) };
   assert.equal(pickNext(cards, TODAY, ["vowels"], "あ").id, "あ");
 });
-test("pickNext prefers the lowest box (least-known / just-flubbed) first", () => {
+test("pickNext prefers the lowest box (least-known first) within a pass", () => {
   const cards = {
     "あ": card({ id: "あ", box: 1 }),
     "い": card({ id: "い", box: 2 }),
+  };
+  for (let i = 0; i < 20; i++) {
+    assert.equal(pickNext(cards, TODAY, ["vowels"]).id, "あ");
+  }
+});
+test("pickNext serves an unseen card before one already answered today", () => {
+  const cards = {
+    "あ": card({ id: "あ", box: 1, lastDay: TODAY }),     // just missed
+    "い": card({ id: "い", box: 2, lastDay: YESTERDAY }), // higher box, unseen today
+  };
+  for (let i = 0; i < 20; i++) {
+    assert.equal(pickNext(cards, TODAY, ["vowels"]).id, "い");
+  }
+});
+test("pickNext starts the next pass once every pending card has been seen", () => {
+  const cards = {
+    "あ": card({ id: "あ", box: 1, lastDay: TODAY }),
+    "い": card({ id: "い", box: 2, lastDay: TODAY }),
   };
   for (let i = 0; i < 20; i++) {
     assert.equal(pickNext(cards, TODAY, ["vowels"]).id, "あ");
