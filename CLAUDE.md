@@ -33,6 +33,9 @@ repo.
 
 - **`_data/deadlines.js` fetches PL/FM deadlines at build time.** eleventy-fetch's day-long `.cache/`
   keeps local rebuilds and `--serve` off the upstreams; CI re-fetches every run.
+- **`VENUES` is the whole approved list** — both sources filter to its keys, so a venue upstream adds
+  can't reach the page until it has an entry. The value is the ccfddl file, null where only
+  yeah-tiger carries the venue.
 - **A per-source fetch or parse failure renders as a note on the page**, not a failed build.
 - **"Days left" is computed client-side** so it doesn't go stale between weekly rebuilds.
 - **A sparse page in the summer trough is normal.**
