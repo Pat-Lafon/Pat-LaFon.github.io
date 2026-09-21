@@ -36,12 +36,6 @@ jobs:
           path: ~/.npm
           key: ${{ runner.os }}-node-${{ hashFiles('**/package.json') }}
 
-      - name: Cache Eleventy .cache
-        uses: actions/cache@v5
-        with:
-          path: ./.cache
-          key: ${{ runner.os }}-eleventy-fetch-cache
-
       - run: npm ci
       - run: npm test
       - run: npm run build-ghpages

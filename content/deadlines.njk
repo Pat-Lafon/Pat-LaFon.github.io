@@ -33,15 +33,13 @@ eleventyNavigation:
 <h1>Deadlines</h1>
 
 {% if deadlines.errors.length %}
-<p><strong>Some sources failed at build time, so this list is incomplete:</strong></p>
+<p><strong>Some sources came up short at build time, so this list is incomplete:</strong></p>
 <ul>
 {% for error in deadlines.errors %}
 	<li>{{ error.source }} — <code>{{ error.message }}</code></li>
 {% endfor %}
 </ul>
 {% endif %}
-
-<h2>Conferences</h2>
 
 <table>
 	<thead>
@@ -59,29 +57,10 @@ eleventyNavigation:
 	</tbody>
 </table>
 
-<h2>Open CFPs on WikiCFP</h2>
-
-<table>
-	<thead>
-		<tr><th>Event</th><th>Deadline</th><th>When</th><th>Where</th></tr>
-	</thead>
-	<tbody>
-	{%- for event in deadlines.wikicfp %}
-		<tr>
-			<td><a href="{{ event.url }}">{{ event.name }}</a><br><small>{{ event.fullName }}</small></td>
-			<td>{{ event.deadline | readableDate("dd LLL yyyy", "UTC-12") }} <span class="countdown" data-deadline="{{ event.deadlineISO }}"></span>{% if event.abstractDeadline %}<br><small>abstract {{ event.abstractDeadline }}</small>{% endif %}</td>
-			<td>{{ event.when }}</td>
-			<td>{{ event.where }}<br><small>{{ event.categories | join(", ") }}</small></td>
-		</tr>
-	{%- endfor %}
-	</tbody>
-</table>
-
 <p><small>
 Deadlines are end of day, Anywhere on Earth. List built {{ deadlines.generated | readableDate("dd LLL yyyy", "UTC-12") }} and refreshed weekly from
-<a href="https://github.com/ccfddl/ccf-deadlines">ccf-deadlines</a>,
-<a href="https://yeah-tiger.github.io/">PL conference deadlines</a>, and
-<a href="http://www.wikicfp.com/">WikiCFP</a>; countdowns are live.
+<a href="https://github.com/ccfddl/ccf-deadlines">ccf-deadlines</a> and
+<a href="https://yeah-tiger.github.io/">PL conference deadlines</a>; countdowns are live.
 </small></p>
 
 </div>
