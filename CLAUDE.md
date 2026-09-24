@@ -31,12 +31,14 @@ repo.
 
 ## Deadlines page
 
-- **`_data/deadlines.js` fetches PL/FM deadlines at build time.** eleventy-fetch's day-long `.cache/`
-  keeps local rebuilds and `--serve` off the upstreams; CI re-fetches every run.
-- **`VENUES` is the whole approved list** — both sources filter to its keys, so a venue upstream adds
-  can't reach the page until it has an entry. The value is the ccfddl file, null where only
-  yeah-tiger carries the venue.
-- **A per-source fetch or parse failure renders as a note on the page**, not a failed build.
+- **`_data/deadlines.js` fetches PL/FM deadlines and event dates from pl-conferences.com's
+  `events.json` at build time.** eleventy-fetch's day-long `.cache/` keeps local rebuilds and
+  `--serve` off the upstream; CI re-fetches every run.
+- **`VENUES` is the whole approved list of feed abbreviations** — a venue the feed adds can't reach
+  the page until it has an entry, and an entry the feed has never heard of renders as a note.
+- **Add an event the feed lacks (e.g. an attend-only industry conference) to `EXTRA_EVENTS`**, in the
+  feed's shape.
+- **A fetch or parse failure renders as a note on the page**, not a failed build.
 - **"Days left" is computed client-side** so it doesn't go stale between weekly rebuilds.
 - **A sparse page in the summer trough is normal.**
 

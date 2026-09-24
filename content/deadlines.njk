@@ -1,6 +1,6 @@
 ---
 title: Deadlines
-description: Upcoming submission deadlines for programming languages and formal methods venues.
+description: Upcoming submission deadlines and events for programming languages and formal methods venues.
 eleventyNavigation:
   key: Deadlines
   order: 5
@@ -57,10 +57,26 @@ eleventyNavigation:
 	</tbody>
 </table>
 
+<h2>Upcoming events</h2>
+
+<table>
+	<thead>
+		<tr><th>Event</th><th>When</th><th>Where</th></tr>
+	</thead>
+	<tbody>
+	{%- for row in deadlines.upcoming %}
+		<tr>
+			<td><a href="{{ row.url }}">{{ row.conf }}</a></td>
+			<td>{{ row.when }}</td>
+			<td>{{ row.place }}</td>
+		</tr>
+	{%- endfor %}
+	</tbody>
+</table>
+
 <p><small>
 Deadlines are end of day, Anywhere on Earth. List built {{ deadlines.generated | readableDate("dd LLL yyyy", "UTC-12") }} and refreshed weekly from
-<a href="https://github.com/ccfddl/ccf-deadlines">ccf-deadlines</a> and
-<a href="https://yeah-tiger.github.io/">PL conference deadlines</a>; countdowns are live.
+<a href="https://pl-conferences.com/">PL Conferences</a>; countdowns are live.
 </small></p>
 
 </div>
