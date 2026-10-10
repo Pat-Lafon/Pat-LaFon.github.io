@@ -11,11 +11,11 @@ eleventyExcludeFromCollections: true
 	<description>Unofficial feed of academy.claude.com/tutorials, rebuilt weekly.</description>
 	{%- for t in claudeTutorials %}
 	<item>
-		<title>{{ t.title | escape }}</title>
+		<title>{{ t.title | safe }}</title>
 		<link>{{ t.url }}</link>
 		<guid isPermaLink="true">{{ t.url }}</guid>
 		{%- if t.description %}
-		<description>{{ t.description | escape }}</description>
+		<description>{{ t.description | safe }}</description>
 		{%- endif %}
 	</item>
 	{%- endfor %}

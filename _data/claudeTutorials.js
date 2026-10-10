@@ -11,29 +11,25 @@ const TUTORIAL = /^https:\/\/academy\.claude\.com\/tutorials\/[^/]+$/;
 
 const get = (url) => Fetch(url, {
 	type: "text",
-	duration: "1d",
 	fetchOptions: { headers: { "user-agent": "pat-lafon.github.io tutorials feed (https://pat-lafon.github.io/)" } },
 });
 
-const NAMED = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };
-
-// Undo HTML entities so the template can re-escape for XML.
-const decode = (s) => s.replace(/&(#x[0-9a-f]+|#\d+|\w+);/gi, (m, e) =>
-	e[0] === "#" ? String.fromCodePoint(e[1] === "x" || e[1] === "X" ? parseInt(e.slice(2), 16) : Number(e.slice(1)))
-	: NAMED[e.toLowerCase()] ?? m);
+// Title and description go into the XML still HTML-escaped, which is only valid
+// while the page uses no named entity beyond XML's five.
+const NOT_XML = /&(?!amp;|lt;|gt;|quot;|apos;|#)\w+;/;
 
 async function tutorial(url) {
 	const html = await get(url);
 	const title = html.match(/<title>(.*?)(?: · Claude Academy)?<\/title>/)?.[1];
 	if (!title) throw new Error(`${url}: no <title>`);
-	const description = html.match(/<meta name="description" content="([^"]*)"/)?.[1];
-	return { url, title: decode(title), description: description && decode(description) };
+	const description = html.match(/<meta name="description" content="([^"]*)"/)?.[1] ?? "";
+	if (NOT_XML.test(title + description)) throw new Error(`${url}: non-XML entity in title or description`);
+	return { url, title, description };
 }
 
 export default async function() {
 	const sitemap = await get(SITEMAP_URL);
-	const urls = [...new Set(sitemap.match(/<loc>[^<]+<\/loc>/g)?.map(l => l.slice(5, -6).trim()))]
-		.filter(u => TUTORIAL.test(u));
+	const urls = (sitemap.match(/<loc>[^<]+<\/loc>/g) ?? []).map(l => l.slice(5, -6)).filter(u => TUTORIAL.test(u));
 	if (!urls.length) throw new Error(`${SITEMAP_URL}: no URLs match ${TUTORIAL}`);
 	return Promise.all(urls.map(tutorial));
 }

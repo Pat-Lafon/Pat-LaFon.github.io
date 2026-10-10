@@ -23,7 +23,8 @@ repo.
 
 - **`npm run build-ghpages` uses `--pathprefix=/`** because this is a user site; a project site needs
   the repo name, and the wrong prefix 404s every internal link on a green build.
-- **A Monday cron redeploys** so the deadlines page's build-time data stays fresh.
+- **A Monday cron redeploys** so the build-time data behind the deadlines page and the tutorials
+  feed stays fresh.
 - **Lychee runs in its own workflow**, so a red link check never blocks a deploy. It doesn't parse JS:
   `link-check.yml` greps audio URLs out of `meditation/app.js` for it, and a URL added to other shipped
   JS needs that grep extended. Hosts it can't check go in `.lycheeignore`.
@@ -41,6 +42,12 @@ repo.
 - **A fetch or parse failure renders as a note on the page**, not a failed build.
 - **"Days left" is computed client-side** so it doesn't go stale between weekly rebuilds.
 - **A sparse page in the summer trough is normal.**
+
+## Claude tutorials feed
+
+- **`_data/claudeTutorials.js` builds `/feed/claude-tutorials.xml`** by scraping academy.claude.com,
+  which publishes no feed and no dates; readers mark unread by `guid`.
+- **Any fetch or parse failure fails the build**, unlike the deadlines page.
 
 ## The embedded PWAs
 
