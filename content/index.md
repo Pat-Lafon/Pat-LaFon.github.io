@@ -41,7 +41,7 @@ services.
 
 During my undergrad at Cornell University, I worked in the
 [APL research group](https://github.com/apl-cornell) on bringing the
-proposed [Gallifrey Programming Language](https://www.cs.cornell.edu/andru/papers/gallifrey/snapl.pdf) for distributed programming to life. I
+proposed [Gallifrey Programming Language](https://doi.org/10.4230/LIPIcs.SNAPL.2019.11) for distributed programming to life. I
 finished as a member of the
 [Capra research group](https://capra.cs.cornell.edu/) where I worked on
 designing a shallowly-embedded DSL for the CPU-GPU interface in Rust.
