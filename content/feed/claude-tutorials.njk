@@ -1,0 +1,23 @@
+---
+permalink: /feed/claude-tutorials.xml
+layout: false
+eleventyExcludeFromCollections: true
+---
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0">
+<channel>
+	<title>Claude Academy tutorials</title>
+	<link>https://academy.claude.com/tutorials</link>
+	<description>Unofficial feed of academy.claude.com/tutorials, rebuilt weekly.</description>
+	{%- for t in claudeTutorials %}
+	<item>
+		<title>{{ t.title | escape }}</title>
+		<link>{{ t.url }}</link>
+		<guid isPermaLink="true">{{ t.url }}</guid>
+		{%- if t.description %}
+		<description>{{ t.description | escape }}</description>
+		{%- endif %}
+	</item>
+	{%- endfor %}
+</channel>
+</rss>

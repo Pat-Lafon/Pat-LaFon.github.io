@@ -5,7 +5,7 @@ on:
     branches:
       - main
   schedule:
-    # Weekly, Monday 07:00 UTC. Refreshes the build-time data behind /deadlines/.
+    # Weekly, Monday 07:00 UTC. Refreshes the build-time data behind /deadlines/ and the tutorials feed.
     - cron: '0 7 * * 1'
   workflow_dispatch:
 
