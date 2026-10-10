@@ -7,10 +7,10 @@ import { z } from "zod";
 
 // Every venue the page tracks, by its pl-conferences.com abbreviation. The feed
 // is filtered to these, so this is the whole list. ETAPS's deadlines live on
-// its member conferences, hence ESOP through iFS.
+// its member conferences, hence ESOP and TACAS.
 const VENUES = new Set([
 	"POPL", "PLDI", "OOPSLA", "ICFP", "ECOOP", "RV", "SAS", "MWPLS",
-	"ETAPS", "ESOP", "FOSSACS", "TACAS", "IFS",
+	"ETAPS", "ESOP", "TACAS",
 	"CAV", "CADE", "FMCAD", "IJCAR", "LICS", "SAT", "ITP",
 ]);
 
