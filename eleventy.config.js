@@ -34,7 +34,6 @@ export default async function(eleventyConfig) {
 		.addPassthroughCopy({
 			"./public/": "/"
 		})
-		.addPassthroughCopy("./content/feed/pretty-atom-feed.xsl")
 		.addPassthroughCopy("./content/papers")
 		.addPassthroughCopy("./content/presentations")
 		.addPassthroughCopy({ "./content/photo.jpeg": "/img/photo.jpeg" })
@@ -63,13 +62,6 @@ export default async function(eleventyConfig) {
 	eleventyConfig.addPlugin(feedPlugin, {
 		type: "atom", // or "rss", "json"
 		outputPath: "/feed/feed.xml",
-		stylesheet: "pretty-atom-feed.xsl",
-		templateData: {
-			eleventyNavigation: {
-				key: "Feed",
-				order: 4
-			}
-		},
 		collection: {
 			name: "posts",
 			limit: 1000,
