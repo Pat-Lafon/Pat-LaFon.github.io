@@ -29,10 +29,13 @@ jobs:
         with:
           # --root-dir resolves root-relative paths (`/about/`) against _site/.
           # Lychee requires an absolute path here, hence $GITHUB_WORKSPACE.
+          # --remap checks the site's own absolute URLs against this build, since
+          # the deploy running alongside hasn't published a new page yet.
           # --accept tolerates common bot-rejection codes from external sites.
           args: >-
             --no-progress
             --root-dir ${{ github.workspace }}/_site
+            --remap 'https://pat-lafon\.github\.io/(.*) file://${{ github.workspace }}/_site/$1'
             --accept '200..=299, 403, 429'
             _site
             meditation-audio-urls.txt
