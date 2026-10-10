@@ -5,7 +5,7 @@ on:
     branches:
       - main
   schedule:
-    # Weekly, Monday 07:00 UTC. Refreshes the build-time data behind /deadlines/ and the tutorials feed.
+    # Weekly, Monday 07:00 UTC. Refreshes the build-time data behind /deadlines/, /concerts/, and the tutorials feed.
     - cron: '0 7 * * 1'
   workflow_dispatch:
 
@@ -22,6 +22,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-22.04
+    env:
+      TICKETMASTER_KEY: ${{ secrets.TICKETMASTER_KEY }}
     steps:
       - uses: actions/checkout@v6
 

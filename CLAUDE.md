@@ -23,8 +23,8 @@ repo.
 
 - **`npm run build-ghpages` uses `--pathprefix=/`** because this is a user site; a project site needs
   the repo name, and the wrong prefix 404s every internal link on a green build.
-- **A Monday cron redeploys** so the build-time data behind the deadlines page and the tutorials
-  feed stays fresh.
+- **A Monday cron redeploys** so the build-time data behind the deadlines and concerts pages and
+  the tutorials feed stays fresh.
 - **Lychee runs in its own workflow**, so a red link check never blocks a deploy. It doesn't parse JS:
   `link-check.yml` greps audio URLs out of `meditation/app.js` for it, and a URL added to other shipped
   JS needs that grep extended. Hosts it can't check go in `.lycheeignore`.
@@ -42,6 +42,16 @@ repo.
 - **A fetch or parse failure renders as a note on the page**, not a failed build.
 - **"Days left" is computed client-side** so it doesn't go stale between weekly rebuilds.
 - **A sparse page in the summer trough is normal.**
+
+## Concerts page
+
+- **`_data/concerts.js` fetches shows from the Ticketmaster Discovery API by attraction id**, never by
+  keyword. The key comes from `TICKETMASTER_KEY` (a repo secret in CI) or
+  `~/.config/ticketmaster-key`; without one the page renders a note.
+- **Ticketmaster shows are kept only in `NEAR_STATES` (IL, IN) or tagged as festivals.** A show's
+  on-sale date appears only before tickets go on sale.
+- **Add a show Ticketmaster doesn't sell to `EXTRA_SHOWS`**; it's listed wherever it is.
+- **`node _data/concerts.js` prints what the page would list.**
 
 ## Claude tutorials feed
 

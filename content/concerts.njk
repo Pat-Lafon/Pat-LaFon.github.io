@@ -1,0 +1,57 @@
+---
+title: Concerts
+description: Upcoming Chicago-area shows and festivals for artists I follow.
+eleventyNavigation:
+  key: Concerts
+  order: 6
+---
+{% css %}
+.concerts table {
+	width: 100%;
+	border-collapse: collapse;
+}
+.concerts th,
+.concerts td {
+	text-align: left;
+	vertical-align: top;
+	padding: 0.35em 0.75em 0.35em 0;
+	border-bottom: 1px solid rgba(128, 128, 128, 0.35);
+}
+.concerts td:first-child {
+	white-space: nowrap;
+}
+{% endcss %}
+
+<div class="concerts">
+
+<h1>Concerts</h1>
+
+{% if concerts.errors.length %}
+<p><strong>Some sources came up short at build time, so this list is incomplete:</strong></p>
+<ul>
+{% for error in concerts.errors %}
+	<li>{{ error.source }} — <code>{{ error.message }}</code></li>
+{% endfor %}
+</ul>
+{% endif %}
+
+<table>
+	<thead>
+		<tr><th>When</th><th>Artist</th><th>Where</th></tr>
+	</thead>
+	<tbody>
+	{%- for show in concerts.shows %}
+		<tr>
+			<td>{{ show.when }}</td>
+			<td><a href="{{ show.url }}">{{ show.artist }}</a>{% if show.onSale %}<br><small>On sale {{ show.onSale }}</small>{% endif %}</td>
+			<td>{% if show.venue %}{{ show.venue }}<br>{% endif %}<small>{{ show.place }}</small></td>
+		</tr>
+	{%- endfor %}
+	</tbody>
+</table>
+
+<p><small>
+List built {{ concerts.generated | readableDate("dd LLL yyyy") }} and refreshed weekly from Ticketmaster, plus shows it doesn't sell.
+</small></p>
+
+</div>
