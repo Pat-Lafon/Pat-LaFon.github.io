@@ -57,8 +57,8 @@ repo.
 
 - **`_data/claudeTutorials.js` builds `/feed/claude-tutorials.xml`** by scraping academy.claude.com,
   which publishes no feed and no dates; readers mark unread by `guid`.
-- **`_data/angryGM.js` builds `/feed/angry-gm.xml`**, theangrygm.com's full archive from its
-  WordPress REST API; the site's own feed carries only the last 10 posts.
+- **`_data/wordpressArchives.js` builds a full-archive `/feed/<slug>.xml` per entry in `SITES`**
+  from each blog's WordPress REST API, for blogs whose own feed carries only the latest posts.
 - **Any fetch or parse failure fails the build**, unlike the deadlines page — a reader drops items
   that vanish from a feed, so a short feed is worse than a stale one.
 

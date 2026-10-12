@@ -1,17 +1,21 @@
 ---
-permalink: /feed/angry-gm.xml
+pagination:
+  data: wordpressArchives
+  size: 1
+  alias: site
+permalink: "/feed/{{ site.slug }}.xml"
 layout: false
 eleventyExcludeFromCollections: true
 ---
 <?xml version="1.0" encoding="utf-8"?>
 <rss version="2.0">
 <channel>
-	<title>The Angry GM (full archive)</title>
-	<link>https://theangrygm.com/</link>
-	<description>Unofficial full-archive feed of theangrygm.com, rebuilt weekly.</description>
-	{%- for p in angryGM %}
+	<title>{{ site.title }} (full archive)</title>
+	<link>{{ site.origin }}/</link>
+	<description>Unofficial full-archive feed of {{ site.origin }}, rebuilt weekly.</description>
+	{%- for p in site.posts %}
 	<item>
-		<title>{{ p.title | safe }}</title>
+		<title>{{ p.title | escape }}</title>
 		<link>{{ p.url }}</link>
 		<guid isPermaLink="true">{{ p.url }}</guid>
 		<pubDate>{{ p.date }}</pubDate>
