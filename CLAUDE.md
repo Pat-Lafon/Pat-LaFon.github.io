@@ -24,7 +24,7 @@ repo.
 - **`npm run build-ghpages` uses `--pathprefix=/`** because this is a user site; a project site needs
   the repo name, and the wrong prefix 404s every internal link on a green build.
 - **A Monday cron redeploys** so the build-time data behind the deadlines and concerts pages and
-  the tutorials feed stays fresh.
+  the generated feeds stays fresh.
 - **Lychee runs in its own workflow**, so a red link check never blocks a deploy. It doesn't parse JS:
   `link-check.yml` greps audio URLs out of `meditation/app.js` for it, and a URL added to other shipped
   JS needs that grep extended. Hosts it can't check go in `.lycheeignore`.
@@ -53,11 +53,14 @@ repo.
 - **Add a show Ticketmaster doesn't sell to `EXTRA_SHOWS`**; it's listed wherever it is.
 - **`node _data/concerts.js` prints what the page would list.**
 
-## Claude tutorials feed
+## Generated feeds
 
 - **`_data/claudeTutorials.js` builds `/feed/claude-tutorials.xml`** by scraping academy.claude.com,
   which publishes no feed and no dates; readers mark unread by `guid`.
-- **Any fetch or parse failure fails the build**, unlike the deadlines page.
+- **`_data/angryGM.js` builds `/feed/angry-gm.xml`**, theangrygm.com's full archive from its
+  WordPress REST API; the site's own feed carries only the last 10 posts.
+- **Any fetch or parse failure fails the build**, unlike the deadlines page — a reader drops items
+  that vanish from a feed, so a short feed is worse than a stale one.
 
 ## The embedded PWAs
 

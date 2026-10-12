@@ -1,0 +1,24 @@
+---
+permalink: /feed/angry-gm.xml
+layout: false
+eleventyExcludeFromCollections: true
+---
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0">
+<channel>
+	<title>The Angry GM (full archive)</title>
+	<link>https://theangrygm.com/</link>
+	<description>Unofficial full-archive feed of theangrygm.com, rebuilt weekly.</description>
+	{%- for p in angryGM %}
+	<item>
+		<title>{{ p.title | safe }}</title>
+		<link>{{ p.url }}</link>
+		<guid isPermaLink="true">{{ p.url }}</guid>
+		<pubDate>{{ p.date }}</pubDate>
+		{%- if p.excerpt %}
+		<description>{{ p.excerpt | escape }}</description>
+		{%- endif %}
+	</item>
+	{%- endfor %}
+</channel>
+</rss>

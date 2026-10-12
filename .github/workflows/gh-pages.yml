@@ -5,7 +5,7 @@ on:
     branches:
       - main
   schedule:
-    # Weekly, Monday 07:00 UTC. Refreshes the build-time data behind /deadlines/, /concerts/, and the tutorials feed.
+    # Weekly, Monday 07:00 UTC. Refreshes the build-time data behind /deadlines/, /concerts/, and the generated feeds.
     - cron: '0 7 * * 1'
   workflow_dispatch:
 
