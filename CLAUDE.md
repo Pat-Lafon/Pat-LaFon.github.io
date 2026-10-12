@@ -27,7 +27,8 @@ repo.
   the generated feeds stays fresh.
 - **Lychee runs in its own workflow**, so a red link check never blocks a deploy. It doesn't parse JS:
   `link-check.yml` greps audio URLs out of `meditation/app.js` for it, and a URL added to other shipped
-  JS needs that grep extended. Hosts it can't check go in `.lycheeignore`.
+  JS needs that grep extended. Hosts it can't check go in `.lycheeignore`. It skips `_site/feed/`,
+  whose generated feeds link thousands of third-party archive posts.
 - **`npm test` scans imports** — an absolute-path import in shipped JS 404s only in production.
 
 ## Deadlines page
