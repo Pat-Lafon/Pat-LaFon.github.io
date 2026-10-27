@@ -1,6 +1,7 @@
 import Fetch from "@11ty/eleventy-fetch";
 import { DateTime } from "luxon";
 import { z } from "zod";
+import { dayRange } from "../_config/dayRange.js";
 
 // Build-time data for /deadlines/. A failed fetch or parse lands in `errors`
 // and renders as a note on the page instead of failing the build.
@@ -48,17 +49,7 @@ function days({ start, end }) {
 }
 
 function dateRange(date) {
-	if (date.start === "TBD") {
-		return "TBD";
-	}
-	const [s, e] = days(date);
-	if (s.hasSame(e, "day")) {
-		return s.toFormat("d LLL yyyy");
-	}
-	if (s.hasSame(e, "month")) {
-		return `${s.toFormat("d")}–${e.toFormat("d LLL yyyy")}`;
-	}
-	return `${s.toFormat(s.hasSame(e, "year") ? "d LLL" : "d LLL yyyy")} – ${e.toFormat("d LLL yyyy")}`;
+	return date.start === "TBD" ? "TBD" : dayRange(...days(date));
 }
 
 function deadlineRows(event, now) {

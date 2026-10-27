@@ -1,0 +1,8 @@
+{% if errors.length %}
+<p><strong>Some sources came up short at build time, so this list is incomplete:</strong></p>
+<ul>
+{% for error in errors %}
+	<li>{{ error.source }} — <code>{{ error.message }}</code></li>
+{% endfor %}
+</ul>
+{% endif %}
