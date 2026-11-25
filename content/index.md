@@ -19,7 +19,7 @@ spurious failures in SMT-based program verification at
 [Pasiv-Aggressive](/presentations/mwpls-2026-pasiv.key) (Keynote).
 
 My paper [We've Got You Covered: Type-Guided
-Repair of Incomplete Generators](/papers/cobb.pdf) has been accepted to [OOPSLA
+Repair of Incomplete Generators](/papers/cobb.pdf) appeared at [OOPSLA
 2025](https://2025.splashcon.org/track/OOPSLA?#event-overview).
 [Slides](/papers/OOPSLA_COBB_TALK.pdf)
 ([Keynote](/presentations/oopsla-2025-coverage-complete.key)) and
@@ -30,7 +30,7 @@ Scientist. I developed a novel black-box, data-driven specification inference
 approach for AWS Cloud API's. This learning framework is designed to support a just-in-time analysis of customer cloud
 automations with respect to the AWS resources on their account.
 
-I presented some upcoming work on synthesizing coverage-complete test input
+I presented early work on synthesizing coverage-complete test input
 generators at [MWPLS 2024](https://pl.cs.uchicago.edu/PLSummit/2024/). The
 slides are available from
 [Google Slides](https://docs.google.com/presentation/d/e/2PACX-1vRwFkr5lJ-eQdlhIbt5eFVJgRmeOvKtCs-v5-OFNea_SvWS-zoyHhkXllarlLqt-tZfcBrSuU5gWT2_/pub?start=false&loop=false&delayms=3000)
@@ -63,7 +63,7 @@ often like to contribute back to Rust crates that I use.
 
 ## Service
 
-From 2022 to 2024 I co-lead the PurPL seminar.
+From 2022 to 2024 I co-led the PurPL seminar.
 
 I continue to hold the role of webmaster for the <a
 href="https://purduepl.github.io/">PurPL</a> website.
