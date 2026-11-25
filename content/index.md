@@ -9,7 +9,7 @@ const eleventyNavigation = {
 
 <img src="./photo.jpeg" alt="Patrick LaFontaine" class="profile-photo"/>
 
-I am a PhD student in CS at Purdue University, studying programming languages,
+I am a PhD candidate in CS at Purdue University, studying programming languages,
 formal methods, automated reasoning, program synthesis, and refinement types
 advised by Professor [Ben Delaware](https://www.cs.purdue.edu/homes/bendy/).
 
