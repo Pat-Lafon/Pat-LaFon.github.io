@@ -13,6 +13,11 @@ I am a PhD student in CS at Purdue University, studying programming languages,
 formal methods, automated reasoning, program synthesis, and refinement types
 advised by Professor [Ben Delaware](https://www.cs.purdue.edu/homes/bendy/).
 
+I presented upcoming work with Kevin Yu on interactive diagnosis and repair of
+spurious failures in SMT-based program verification at
+[MWPLS 2026](https://2026.mwpls.org):
+[Pasiv-Aggressive](/presentations/mwpls-2026-pasiv.key) (Keynote).
+
 My paper [We've Got You Covered: Type-Guided
 Repair of Incomplete Generators](/papers/cobb.pdf) has been accepted to [OOPSLA
 2025](https://2025.splashcon.org/track/OOPSLA?#event-overview).
